@@ -137,7 +137,7 @@ class Model {
 
       public static function factory(data:stitch.Document, formatter:stitch.Formatter<Dynamic>):$t {
         var model = new $p();
-        var raw:haxe.DynamicAccess<String> = cast formatter.decode(data.contents);
+        var raw:haxe.DynamicAccess<Dynamic> = cast formatter.decode(data.contents);
         $b{decode}
         return model;
       }

@@ -1,6 +1,7 @@
 package stitch;
 
 import stitch.field.*;
+import stitch.formatter.*;
 import stitch.connection.MemoryConnection;
 
 using medic.Assert;
@@ -27,7 +28,14 @@ class ModelTest {
         'foo/_info.txt' => 'value: foo',
         'bar/_info.txt' => 'value: bar',
         'bin/_info.txt' => 'value: bin'
-      ]
+      ],
+      'repeat/foo.txt' => "
+        name: foo
+        ---
+        items[]: foo
+        ---
+        items[]: bar
+      "
     ]);
     return new Store(connection);
   }
@@ -54,9 +62,9 @@ class ModelTest {
       name: 'name',
       path: 'some/path/to/name',
       contents: '
-foo: foo
----
-bar: bar
+        foo: foo
+        ---
+        bar: bar
       ',
       created: time,
       modified: time
@@ -94,6 +102,15 @@ bar: bar
     json.bar.equals('bar');
   }
 
+  @test('Reads repeatable fields')
+  public function testRepeatable() {
+    var store = createTestStore();
+    var model = store.get(RepeatableModel).find('foo');
+    model.name.equals('foo');
+    model.items.length.equals(2);
+    model.items[0].equals('foo');
+  }
+
   // todo: test using other formatters and stuff?
   //       And fields getting info from the right places?
 
@@ -129,4 +146,12 @@ private class FolderModel implements Model {
   @StringField public var value:String;
   @ChildrenField( relation = ChildrenModel ) public var children:Selection<ChildrenModel>;
   @ChildrenField( relation = FolderModel, path = 'stuff' ) public var foldered:Selection<FolderModel>;
+}
+
+@Collection( path = 'repeat' )
+private class RepeatableModel implements Model {
+  @StringField public var name:String; 
+  @RepeatableField( 
+    field = model -> new StringField(model, {})
+  ) public var items:Array<String>;
 }

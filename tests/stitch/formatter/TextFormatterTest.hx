@@ -11,11 +11,11 @@ class TextFormatterTest {
   public function testDecode() {
     var formatter = new TextFormatter();
     var obj:{ foo:String, bar:String, bin:String } = formatter.decode('
-foo: foo
----
-bar: bar
----
-bin: bin
+      foo: foo
+      ---
+      bar: bar
+      ---
+      bin: bin
     ');
     obj.foo.equals('foo');
     obj.bar.equals('bar');
@@ -26,19 +26,20 @@ bin: bin
   public function testSplitter() {
     var formatter = new TextFormatter();
     var obj:{ foo:String, content:String } = formatter.decode('
-foo: foo
----
-content:
+      foo: foo
+      ---
+      content:
 
-SomeTitle
----------
-This is ok!
+      SomeTitle
+      ---------
+      This is ok!
     ');
     obj.foo.equals('foo');
     obj.content.equals('
-SomeTitle
----------
-This is ok!'.trim());
+      SomeTitle
+      ---------
+      This is ok!
+    '.trim());
   }
 
   @test('Encodes data correctly')
