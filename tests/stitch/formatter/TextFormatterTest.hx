@@ -61,12 +61,12 @@ This is ok!'.trim());
   public function testRepeat() {
     var formatter = new TextFormatter();
     var obj:{ foo:Array<String> } = formatter.decode('
-  foo[]: one
-  ---
-  foo[]: two
-  ---
-  foo[]: three
-  ');
+foo[]: one
+---
+foo[]: two
+---
+foo[]: three
+    ');
     obj.foo.length.equals(3);
   }
 

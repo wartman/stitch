@@ -27,6 +27,7 @@ class Test {
     runner.add(new TextFormatterTest());
 
     runner.add(new JsonFieldTest());
+    runner.add(new RepeatableFieldTest());
 
     runner.run();
   }

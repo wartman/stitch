@@ -6,6 +6,7 @@
   "version": "0.0.0",
   "releasenote": "Just a test!",
   "dependencies": {
-    "markdown": ""
+    "markdown": "",
+    "yaml": ""
   }
 }
