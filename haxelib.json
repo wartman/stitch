@@ -1,0 +1,11 @@
+{
+  "name": "stitch",
+  "classPath": "src/",
+  "license": "GPL",
+  "contributors": [ "wartman" ],
+  "version": "0.0.0",
+  "releasenote": "Just a test!",
+  "dependencies": {
+    "markdown": ""
+  }
+}
