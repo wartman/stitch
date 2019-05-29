@@ -26,7 +26,7 @@ class Test {
 
     runner.add(new TextFormatterTest());
 
-    runner.add(new MetaFieldTest());
+    runner.add(new JsonFieldTest());
 
     runner.run();
   }

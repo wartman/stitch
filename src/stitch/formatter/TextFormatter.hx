@@ -6,6 +6,16 @@ import stitch.Formatter;
 using Reflect;
 using StringTools;
 
+/**
+  A simple key/value format.
+  ```
+  key: some value
+  ---
+  repeatable-key[]: a
+  ---
+  repeatable-key[]: b
+  ```
+**/
 class TextFormatter<T> implements Formatter<T> {
 
   public final defaultExtension:String = 'txt';
@@ -28,14 +38,25 @@ class TextFormatter<T> implements Formatter<T> {
   }
 
   public function decode(data:String):T {
-    var out = new DynamicAccess();
+    var out:DynamicAccess<Dynamic> = new DynamicAccess();
     var parts = matcher.split(data);
     for (part in parts) {
       // Todo: check for errors here.
       var sep = part.indexOf(':');
       var key = part.substr(0, sep).trim();
       var value = part.substr(sep + 1).trim();
-      out.set(key, value);
+      
+      if (key.endsWith('[]')) {
+        key = key.substr(0, key.indexOf('[]'));
+        if (!out.exists(key)) {
+          out.set(key, []);
+        }
+        var data:Array<Dynamic> = out.get(key);
+        // todo: ensure that data is an array
+        data.push(value);
+      } else {
+        out.set(key, value);
+      }
     }
     return cast out;
   }

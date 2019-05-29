@@ -62,6 +62,8 @@ class Model {
 
       if (Context.unify(decoType, Context.getType('stitch.Field.DecodeableField'))) {
         decode.push(macro model.fields.$name.decode(data, raw.get($v{name})));
+      } else if (Context.unify(decoType, Context.getType('stitch.Field.DecodeableRepeatableField'))) {
+        decode.push(macro model.fields.$name.decode(data, raw.get($v{name})));
       }
       
       if (Context.unify(decoType, Context.getType('stitch.Field.EncodeableField'))) {

@@ -5,7 +5,11 @@ import haxe.DynamicAccess;
 import stitch.Field;
 import stitch.*;
 
-class MetaField 
+/**
+  As the name suggests, this field handles encoding and decoding
+  arbitrary JSON data in a field.
+**/
+class JsonField 
   implements ReadOnlyField<DynamicAccess<String>>
   implements PersistantField 
 {

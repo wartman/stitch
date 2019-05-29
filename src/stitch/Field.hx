@@ -25,6 +25,10 @@ interface DecodeableField {
   public function decode(document:Document, value:String):Void;
 }
 
+interface DecodeableRepeatableField {
+  public function decode(document:Document, values:Array<String>):Void;
+}
+
 interface PersistantField
   extends EncodeableField
   extends DecodeableField {}

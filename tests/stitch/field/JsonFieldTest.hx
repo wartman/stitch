@@ -6,14 +6,14 @@ import stitch.field.support.*;
 using stitch.support.DocumentTools;
 using medic.Assert;
 
-class MetaFieldTest {
+class JsonFieldTest {
 
   public function new() {}
 
   @test('Decodes json')
   public function testDecode() {
     var data = Json.stringify({ foo: 'foo', bar: 'bar' });
-    var field = new MetaField(FieldModel.getModel(), {});
+    var field = new JsonField(FieldModel.getModel(), {});
     field.decode(DocumentTools.createDocument(''), data);
     field.get().get('foo').equals('foo');
     field.get().get('bar').equals('bar');
@@ -21,7 +21,7 @@ class MetaFieldTest {
   
   @test('Encodes json')
   public function testEncode() {
-    var field = new MetaField(FieldModel.getModel(), {});
+    var field = new JsonField(FieldModel.getModel(), {});
     field.decode(DocumentTools.createDocument(''), null);
     field.get().set('foo', 'foo');
     field.get().set('bar', 'bar');
