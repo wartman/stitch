@@ -8,7 +8,7 @@ class RepeatableField
   implements DecodeableRepeatableField
 {
   
-  @:prop var field:Class<Field<Dynamic>>;
+  @:prop var field:(model:Model)->Field<Dynamic>;
   final model:Model;
   final fields:Array<Field<Dynamic>> = [];
 
@@ -30,7 +30,7 @@ class RepeatableField
 
   public function decode(document:Document, values:Array<String>) {
     for (v in values) {
-      var f = Type.createInstance(field, [ model, {} ]);
+      var f = field(model);
       if (Std.is(f, DecodeableField)) {
         var d:DecodeableField = cast f;
         d.decode(document, v);
