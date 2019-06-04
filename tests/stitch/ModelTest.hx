@@ -55,7 +55,7 @@ class ModelTest {
     model.id.equals('foo');
   }
 
-  @test('Model can be created from Content')
+  @test('Model can be created from Documents')
   public function testFactory() {
     var time = Date.now();
     var model = TestModel.collection.factory({
@@ -66,6 +66,26 @@ class ModelTest {
         ---
         bar: bar
       ',
+      created: time,
+      modified: time
+    });
+    model.id.equals('name');
+    model.foo.equals('foo');
+    model.bar.equals('bar');
+    model.created.equals(time);
+  }
+
+  @test('Model will prefer parsed contents if available')
+  public function testFactoryWithParsedContents() {
+    var time = Date.now();
+    var model = TestModel.collection.factory({
+      name: 'name',
+      path: 'some/path/to/name',
+      contents: '',
+      parsedContents: {
+        foo: 'foo',
+        bar: 'bar'
+      },
       created: time,
       modified: time
     });
@@ -151,7 +171,5 @@ private class FolderModel implements Model {
 @Collection( path = 'repeat' )
 private class RepeatableModel implements Model {
   @StringField public var name:String; 
-  @RepeatableField( 
-    field = model -> new StringField(model, {})
-  ) public var items:Array<String>;
+  @RepeatableField( field = StringField ) public var items:Array<String>;
 }

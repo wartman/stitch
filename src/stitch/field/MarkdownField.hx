@@ -39,7 +39,7 @@ class MarkdownField
     return raw;
   }
 
-  public function decode(document:Document, value:String) {
+  public function decode(document:Document, value:Dynamic) {
     if (value == null) return;
     set(value);
   }

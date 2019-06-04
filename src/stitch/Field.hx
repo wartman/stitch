@@ -22,11 +22,11 @@ interface EncodeableField {
 }
 
 interface DecodeableField {
-  public function decode(document:Document, value:String):Void;
+  public function decode(document:Document, value:Dynamic):Void;
 }
 
 interface DecodeableRepeatableField {
-  public function decode(document:Document, values:Array<String>):Void;
+  public function decode(document:Document, values:Array<Dynamic>):Void;
 }
 
 interface PersistantField

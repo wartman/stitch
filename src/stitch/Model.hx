@@ -58,7 +58,9 @@ class Model {
       });
 
       inits.push(macro @:pos(f.field.pos) fields.$name = new $localPath(this, ${deco.params}));
-      toJson.push({ field: name, expr: macro fields.$name.getJson() });
+      if (!f.field.meta.exists(m -> m.name == ':noJson')) {
+        toJson.push({ field: name, expr: macro fields.$name.getJson() });
+      }
 
       if (Context.unify(decoType, Context.getType('stitch.Field.DecodeableField'))) {
         decode.push(macro model.fields.$name.decode(data, raw.get($v{name})));
@@ -137,13 +139,19 @@ class Model {
 
       public static function factory(data:stitch.Document, formatter:stitch.Formatter<Dynamic>):$t {
         var model = new $p();
-        var raw:haxe.DynamicAccess<Dynamic> = cast formatter.decode(data.contents);
+        var raw:haxe.DynamicAccess<Dynamic>;
+        if (data.parsedContents == null) {
+          raw = cast formatter.decode(data.contents);
+          data.parsedContents = raw;
+        } else {
+          raw = cast data.parsedContents;
+        }
         $b{decode}
         return model;
       }
 
       public final fields:$fieldProps;
-      var store:Store;
+      var store:stitch.Store;
 
       public function new(?__props:$initProps) {
         fields = cast {};
@@ -151,7 +159,7 @@ class Model {
         $b{inits};
       }
 
-      public function connect(store:Store) {
+      public function connect(store:stitch.Store) {
         this.store = store;
       }
 
@@ -176,8 +184,8 @@ class Model {
       var name = cls.name.toLowerCase();
       export = export.concat(classHandler(cls, {
         name: 'Collection',
-        localPath: { name: 'Collection', pack: [ 'corvid', 'core', 'data' ] },
-        fullPath: { name: 'Collection', pack: [ 'corvid', 'core', 'data' ] },
+        localPath: { name: 'Collection', pack: [ 'stitch' ] },
+        fullPath: { name: 'Collection', pack: [ 'stitch' ] },
         params: macro { path: $v{name} },
         kind: DecoAnnotation
       }));

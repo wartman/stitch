@@ -3,15 +3,13 @@ package stitch.field;
 import stitch.Field;
 import stitch.Document;
 
-class StringField 
-  implements MutableField<String>
+class IntField 
+  implements MutableField<Int>
   implements PersistantField  
 {
 
   final model:Model;
-  @:prop @:optional var formatter:(value:String)->String;
-  @:prop @:optional var validate:(value:String)->Bool;
-  var value:String = '';
+  var value:Int = null;
 
   public function new(model, options) {
     this.model = model;
@@ -27,17 +25,11 @@ class StringField
   }
 
   public function set(value) {
-    if (validate != null) {
-      if (!validate(value)) {
-        // do a thing??
-      }
-    }
-    if (formatter != null) value = formatter(value);
     return this.value = value;
   }
 
-  public function encode() {
-    return this.value;
+  public function encode():String {
+    return cast this.value;
   }
 
   public function decode(document:Document, value:Dynamic) {

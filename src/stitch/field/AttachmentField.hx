@@ -40,10 +40,10 @@ class AttachmentField
   }
 
   public function getJson() {
-    return null;
+    return get();
   }
 
-  public function decode(doc:Document, _:String) {
+  public function decode(doc:Document, _:Dynamic) {
     switch model.getModelCollection().resource.getClass() {
       case FolderResource: modelPath = doc.path.directory();
       default: modelPath = doc.path.withoutExtension();

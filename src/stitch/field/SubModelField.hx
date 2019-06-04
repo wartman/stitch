@@ -10,7 +10,7 @@ using stitch.ModelTools;
   however it parses data already present in the current Document
   rather than loading an external Document.
 **/
-class InlineModelField
+class SubModelField
   implements ReadOnlyField<Model>
   implements PersistantField
 {
@@ -36,15 +36,27 @@ class InlineModelField
     return submodel.encode();
   }
 
-  public function decode(document:Document, value:String) {
+  public function decode(document:Document, value:Dynamic) {
     var collection = relation.getCollection();
     var doc = new Document({
-      name: document.name + '[child]',
+      name: document.name + '[${collection.path}]',
       path: document.path,
-      contents: value,
+
+      // Potentially, the contents of this field is using
+      // a different Formatter than the parent type and
+      // will need to be parsed. In this case, `value`
+      // is a string.
+      contents: Std.is(value, String) ? value : '',
+      
+      // Otherwise, we can just use the pased value.
+      // If `Document.parsedContents` is not null, it will
+      // always be prefered to `contents`.
+      parsedContents: Std.is(value, String) ? null : value,
+      
       created: document.created,
       modified: document.modified
     });
+
     submodel = collection.factory(doc);
   }
   

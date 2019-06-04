@@ -29,7 +29,7 @@ class IdField
     return this.value = value;
   }
 
-  public function decode(document:Document, value:String) {
+  public function decode(document:Document, value:Dynamic) {
     set(document.name);
   }
 

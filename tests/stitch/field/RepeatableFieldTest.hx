@@ -13,7 +13,7 @@ class RepeatableFieldTest {
   public function testDecode() {
     var data = [ 'a', 'b' ];
     var field = new RepeatableField(FieldModel.getModel(), {
-      field: model -> new StringField(model, {})
+      field: StringField
     });
     field.decode(''.createDocument(), data);
     var values:Array<String> = cast field.get();

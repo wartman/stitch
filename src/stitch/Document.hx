@@ -6,6 +6,7 @@ typedef DocumentObject = {
   name:String,
   path:String,
   contents:String,
+  ?parsedContents:Dynamic,
   created:Date,
   modified:Date
 };

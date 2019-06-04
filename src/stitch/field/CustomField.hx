@@ -1,34 +1,38 @@
 package stitch.field;
 
 import stitch.Field;
+import stitch.Model;
 import stitch.Document;
 
-class DocumentField 
+class CustomField
   implements ReadOnlyField<Dynamic>
-  implements DecodeableField  
+  implements PersistantField
 {
 
+  @:prop var decoder:(document:Document, value:String)->Dynamic;
+  @:prop var encoder:(value:Dynamic)->Dynamic;
   final model:Model;
-  @:prop var handler:(document:Document)->Dynamic;
-  @:prop @:optional var fallback:()->Dynamic;
   var value:Dynamic;
 
   public function new(model, options) {
     this.model = model;
     setProperties(options);
   }
-  
+
   public function get() {
-    if (value == null && fallback != null) return fallback();
     return value;
   }
-  
-  public function getJson():Dynamic {
+
+  public function getJson() {
     return get();
   }
 
+  public function encode() {
+    return encoder(value);
+  }
+
   public function decode(document:Document, value:Dynamic) {
-    this.value = handler(document);
+    this.value = decoder(document, value);
   }
 
 }

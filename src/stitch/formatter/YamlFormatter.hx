@@ -1,5 +1,6 @@
 package stitch.formatter;
 
+import yaml.Parser;
 import yaml.Yaml;
 import stitch.Formatter;
 
@@ -15,7 +16,7 @@ class YamlFormatter<T> implements Formatter<T> {
   }
   
   public function decode(data:String):T {
-    return cast Yaml.parse(data);
+    return cast Yaml.parse(data, Parser.options().useObjects());
   }
 
 }

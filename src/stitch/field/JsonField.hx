@@ -34,7 +34,7 @@ class JsonField
     return Json.stringify(data);
   }
 
-  public function decode(document:Document, value:String) {
+  public function decode(document:Document, value:Dynamic) {
     if (value == null) {
       data = new DynamicAccess();
     } else {

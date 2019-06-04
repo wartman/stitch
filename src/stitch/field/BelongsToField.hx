@@ -38,7 +38,7 @@ class BelongsToField
     return value.id;
   }
 
-  public function decode(document:Document, value:String) {
+  public function decode(document:Document, value:Dynamic) {
     // Managers are not available while decoding, and 
     // lazy loading is better for this anyway.
     id = value;

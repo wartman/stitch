@@ -32,7 +32,7 @@ class DateField
     return value.toString();
   }
 
-  public function decode(document:Document, value:String):Void {
+  public function decode(document:Document, value:Dynamic):Void {
     if (value == null) { 
       set(Date.now());
       return;
