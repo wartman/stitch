@@ -32,6 +32,7 @@ class MarkdownField
 
   public function set(value:String) {
     raw = value;
+    if (value == null) return null;
     return this.value = markdownToHtml(value);
   }
 

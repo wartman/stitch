@@ -29,6 +29,7 @@ class SubModelField
   }
 
   public function getJson():Dynamic {
+    if (submodel == null) return null;
     return submodel.toJson();
   }
 
@@ -37,6 +38,8 @@ class SubModelField
   }
 
   public function decode(document:Document, value:Dynamic) {
+    if (value == null) return;
+
     var collection = relation.getCollection();
     var doc = new Document({
       name: document.name + '[${collection.path}]',
