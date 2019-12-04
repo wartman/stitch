@@ -5,6 +5,7 @@
 -lib medic
 -lib hxnodejs
 -lib yaml
--main Test
+# -main Test
+-main Test2
 
 -js dist/test.js

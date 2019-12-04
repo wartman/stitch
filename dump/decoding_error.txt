@@ -1,0 +1,575 @@
+[{
+	access: []
+	doc: null
+	kind: FVar(TPath({
+		name: String
+		pack: []
+		params: []
+		sub: null
+	}), null)
+	meta: [{
+		name: :info
+		params: [{
+			expr: EConst(CIdent(name))
+			pos: #pos
+		}]
+		pos: #pos
+	}]
+	name: id
+	pos: #pos
+}, {
+	access: [APublic]
+	doc: null
+	kind: FProp(get, never, TPath({
+		name: String
+		pack: []
+		params: []
+		sub: null
+	}), null)
+	meta: [{
+		name: :field
+		params: []
+		pos: #pos
+	}]
+	name: foo
+	pos: #pos
+}, {
+	access: [APublic]
+	doc: null
+	kind: FProp(get, never, TPath({
+		name: String
+		pack: []
+		params: []
+		sub: null
+	}), null)
+	meta: [{
+		name: :field
+		params: []
+		pos: #pos
+	}]
+	name: bar
+	pos: #pos
+}, {
+	access: [APublic]
+	doc: null
+	kind: FProp(get, never, TPath({
+		name: Sub
+		pack: []
+		params: []
+		sub: null
+	}), null)
+	meta: [{
+		name: :field
+		params: []
+		pos: #pos
+	}]
+	name: sub
+	pos: #pos
+}, {
+	access: null
+	doc: null
+	kind: FFun({
+		args: []
+		expr: {
+			expr: EBlock([{
+				expr: EReturn({
+					expr: EField({
+						expr: EConst(CIdent(__fields__))
+						pos: #pos
+					}, foo)
+					pos: #pos
+				})
+				pos: #pos
+			}])
+			pos: #pos
+		}
+		params: []
+		ret: null
+	})
+	meta: null
+	name: get_foo
+	pos: #pos
+}, {
+	access: null
+	doc: null
+	kind: FFun({
+		args: []
+		expr: {
+			expr: EBlock([{
+				expr: EReturn({
+					expr: EField({
+						expr: EConst(CIdent(__fields__))
+						pos: #pos
+					}, bar)
+					pos: #pos
+				})
+				pos: #pos
+			}])
+			pos: #pos
+		}
+		params: []
+		ret: null
+	})
+	meta: null
+	name: get_bar
+	pos: #pos
+}, {
+	access: null
+	doc: null
+	kind: FFun({
+		args: []
+		expr: {
+			expr: EBlock([{
+				expr: EReturn({
+					expr: EField({
+						expr: EConst(CIdent(__fields__))
+						pos: #pos
+					}, sub)
+					pos: #pos
+				})
+				pos: #pos
+			}])
+			pos: #pos
+		}
+		params: []
+		ret: null
+	})
+	meta: null
+	name: get_sub
+	pos: #pos
+}, {
+	access: [AFinal]
+	doc: null
+	kind: FVar(TPath({
+		name: Info
+		pack: [stitch2]
+		params: []
+		sub: null
+	}), null)
+	meta: null
+	name: _stitch_info
+	pos: #pos
+}, {
+	access: [APublic, AStatic]
+	doc: null
+	kind: FFun({
+		args: [{
+			meta: null
+			name: store
+			opt: false
+			type: TPath({
+				name: Store
+				pack: [stitch2]
+				params: []
+				sub: null
+			})
+			value: null
+		}]
+		expr: {
+			expr: EBlock([{
+				expr: EReturn({
+					expr: ENew({
+						name: Repository
+						pack: [stitch2]
+						params: []
+						sub: null
+					}, [{
+						expr: EConst(CIdent(store))
+						pos: #pos
+					}, {
+						expr: EObjectDecl([{
+							expr: {
+								expr: EConst(CString(foo, DoubleQuotes))
+								pos: #pos
+							}
+							field: path
+							quotes: Unquoted
+						}, {
+							expr: {
+								expr: EConst(CIdent(null))
+								pos: #pos
+							}
+							field: isDirectory
+							quotes: Unquoted
+						}, {
+							expr: null <- expected value
+							field: dataFile
+							quotes: Unquoted
+						}])
+						pos: #pos
+					}, {
+						expr: EConst(CIdent(_stitch_decode))
+						pos: #pos
+					}, {
+						expr: EConst(CIdent(_stitch_encode))
+						pos: #pos
+					}])
+					pos: #pos
+				})
+				pos: #pos
+			}])
+			pos: #pos
+		}
+		params: []
+		ret: null
+	})
+	meta: null
+	name: _stitch_createRepository
+	pos: #pos
+}, {
+	access: [APublic, AStatic]
+	doc: null
+	kind: FFun({
+		args: [{
+			meta: null
+			name: __i__
+			opt: false
+			type: TPath({
+				name: Info
+				pack: [stitch2]
+				params: []
+				sub: null
+			})
+			value: null
+		}, {
+			meta: null
+			name: __f__
+			opt: false
+			type: null
+			value: null
+		}]
+		expr: {
+			expr: EBlock([{
+				expr: EReturn({
+					expr: ENew({
+						name: Tester
+						pack: []
+						params: null
+						sub: null
+					}, [{
+						expr: EConst(CIdent(__i__))
+						pos: #pos
+					}, {
+						expr: EObjectDecl([{
+							expr: {
+								expr: ECall({
+									expr: EField({
+										expr: EField({
+											expr: EField({
+												expr: EConst(CIdent(stitch2))
+												pos: #pos
+											}, transformer)
+											pos: #pos
+										}, StringTransformer)
+										pos: #pos
+									}, _stitch_decode)
+									pos: #pos
+								}, [{
+									expr: EConst(CIdent(__i__))
+									pos: #pos
+								}, {
+									expr: EField({
+										expr: EConst(CIdent(__f__))
+										pos: #pos
+									}, foo)
+									pos: #pos
+								}])
+								pos: #pos
+							}
+							field: foo
+							quotes: null
+						}, {
+							expr: {
+								expr: ECall({
+									expr: EField({
+										expr: EField({
+											expr: EField({
+												expr: EConst(CIdent(stitch2))
+												pos: #pos
+											}, transformer)
+											pos: #pos
+										}, StringTransformer)
+										pos: #pos
+									}, _stitch_decode)
+									pos: #pos
+								}, [{
+									expr: EConst(CIdent(__i__))
+									pos: #pos
+								}, {
+									expr: EField({
+										expr: EConst(CIdent(__f__))
+										pos: #pos
+									}, bar)
+									pos: #pos
+								}])
+								pos: #pos
+							}
+							field: bar
+							quotes: null
+						}, {
+							expr: {
+								expr: ECall({
+									expr: EField({
+										expr: EConst(CIdent(Sub))
+										pos: #pos
+									}, _stitch_decode)
+									pos: #pos
+								}, [{
+									expr: EConst(CIdent(__i__))
+									pos: #pos
+								}, {
+									expr: EField({
+										expr: EConst(CIdent(__f__))
+										pos: #pos
+									}, sub)
+									pos: #pos
+								}])
+								pos: #pos
+							}
+							field: sub
+							quotes: null
+						}])
+						pos: #pos
+					}])
+					pos: #pos
+				})
+				pos: #pos
+			}])
+			pos: #pos
+		}
+		params: []
+		ret: null
+	})
+	meta: null
+	name: _stitch_decode
+	pos: #pos
+}, {
+	access: [APublic, AStatic]
+	doc: null
+	kind: FFun({
+		args: [{
+			meta: null
+			name: __f__
+			opt: false
+			type: TPath({
+				name: Test2
+				pack: []
+				params: []
+				sub: Tester
+			})
+			value: null
+		}]
+		expr: {
+			expr: EBlock([{
+				expr: EReturn({
+					expr: EObjectDecl([{
+						expr: {
+							expr: ECall({
+								expr: EField({
+									expr: EField({
+										expr: EField({
+											expr: EConst(CIdent(stitch2))
+											pos: #pos
+										}, transformer)
+										pos: #pos
+									}, StringTransformer)
+									pos: #pos
+								}, _stitch_encode)
+								pos: #pos
+							}, [{
+								expr: EField({
+									expr: EConst(CIdent(__f__))
+									pos: #pos
+								}, foo)
+								pos: #pos
+							}])
+							pos: #pos
+						}
+						field: foo
+						quotes: null
+					}, {
+						expr: {
+							expr: ECall({
+								expr: EField({
+									expr: EField({
+										expr: EField({
+											expr: EConst(CIdent(stitch2))
+											pos: #pos
+										}, transformer)
+										pos: #pos
+									}, StringTransformer)
+									pos: #pos
+								}, _stitch_encode)
+								pos: #pos
+							}, [{
+								expr: EField({
+									expr: EConst(CIdent(__f__))
+									pos: #pos
+								}, bar)
+								pos: #pos
+							}])
+							pos: #pos
+						}
+						field: bar
+						quotes: null
+					}, {
+						expr: {
+							expr: ECall({
+								expr: EField({
+									expr: EConst(CIdent(Sub))
+									pos: #pos
+								}, _stitch_encode)
+								pos: #pos
+							}, [{
+								expr: EField({
+									expr: EConst(CIdent(__f__))
+									pos: #pos
+								}, sub)
+								pos: #pos
+							}])
+							pos: #pos
+						}
+						field: sub
+						quotes: null
+					}])
+					pos: #pos
+				})
+				pos: #pos
+			}])
+			pos: #pos
+		}
+		params: []
+		ret: null
+	})
+	meta: null
+	name: _stitch_encode
+	pos: #pos
+}, {
+	access: null
+	doc: null
+	kind: FVar(TAnonymous([{
+		access: [APublic]
+		doc: null
+		kind: FVar(TPath({
+			name: String
+			pack: []
+			params: []
+			sub: null
+		}), null)
+		meta: []
+		name: foo
+		pos: #pos
+	}, {
+		access: [APublic]
+		doc: null
+		kind: FVar(TPath({
+			name: String
+			pack: []
+			params: []
+			sub: null
+		}), null)
+		meta: []
+		name: bar
+		pos: #pos
+	}, {
+		access: [APublic]
+		doc: null
+		kind: FVar(TPath({
+			name: Sub
+			pack: []
+			params: []
+			sub: null
+		}), null)
+		meta: []
+		name: sub
+		pos: #pos
+	}]), null)
+	meta: null
+	name: __fields__
+	pos: #pos
+}, {
+	access: [APublic]
+	doc: null
+	kind: FFun({
+		args: [{
+			meta: null
+			name: _stitch_info
+			opt: false
+			type: null
+			value: null
+		}, {
+			meta: null
+			name: __f__
+			opt: false
+			type: TAnonymous([{
+				access: [APublic]
+				doc: null
+				kind: FVar(TPath({
+					name: String
+					pack: []
+					params: []
+					sub: null
+				}), null)
+				meta: []
+				name: foo
+				pos: #pos
+			}, {
+				access: [APublic]
+				doc: null
+				kind: FVar(TPath({
+					name: String
+					pack: []
+					params: []
+					sub: null
+				}), null)
+				meta: []
+				name: bar
+				pos: #pos
+			}, {
+				access: [APublic]
+				doc: null
+				kind: FVar(TPath({
+					name: Sub
+					pack: []
+					params: []
+					sub: null
+				}), null)
+				meta: []
+				name: sub
+				pos: #pos
+			}])
+			value: null
+		}]
+		expr: {
+			expr: EBlock([{
+				expr: EBinop(OpAssign, {
+					expr: EField({
+						expr: EConst(CIdent(this))
+						pos: #pos
+					}, _stitch_info)
+					pos: #pos
+				}, {
+					expr: EConst(CIdent(_stitch_info))
+					pos: #pos
+				})
+				pos: #pos
+			}, {
+				expr: EBinop(OpAssign, {
+					expr: EConst(CIdent(__fields__))
+					pos: #pos
+				}, {
+					expr: EConst(CIdent(__f__))
+					pos: #pos
+				})
+				pos: #pos
+			}])
+			pos: #pos
+		}
+		params: []
+		ret: null
+	})
+	meta: null
+	name: new
+	pos: #pos
+}]
+line 195: expected value
