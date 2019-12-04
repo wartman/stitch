@@ -8,11 +8,11 @@ class JsonParser implements Parser {
   public function new() {}
 
   public function parse(data:String):Dynamic {
-    return Json.stringify(data);
+    return cast Json.parse(data);
   }
   
   public function generate(data:Dynamic):String {
-    return cast Json.parse(data);
+    return Json.stringify(data);
   }
 
 }

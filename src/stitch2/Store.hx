@@ -4,24 +4,6 @@ import haxe.ds.Map;
 
 using haxe.io.Path;
 
-/**
-  Api will be something like:
-
-  // For a model like:
-  class Post {
-    @:field(info = name) var id:String;
-    @:field(info = created) var created:Date;
-    @:field var title:String;
-    @:field var extra:Extra;
-    @:field(format = MarkdownFormatter) var content:String;
-    @:hasOne(id) var author:User; 
-  }
-
-  var store = new Store(FileConnection(Sys.getCwd()));
-  var posts = store.getRepository(Post);
-  var foo = posts.get('foo');
-
-**/
 @:allow(stitch2.Repository)
 class Store {
   
