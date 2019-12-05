@@ -9,19 +9,19 @@ class Store {
   
   final connection:Connection;
   final repositories:Map<RepositoryFactory<Dynamic>, Repository<Dynamic>> = [];
-  final parsers:Map<String, Parser>;
+  final formatters:Map<String, Formatter>;
 
-  public function new(connection, ?parsers) {
+  public function new(connection, ?formatters) {
     this.connection = connection;
-    this.parsers = parsers != null ? parsers : [];
+    this.formatters = formatters != null ? formatters : [];
   }
 
-  public function addParser(ext:String, parser:Parser) {
-    parsers.set(ext, parser);
+  public function addFormatter(ext:String, parser:Formatter) {
+    formatters.set(ext, parser);
   }
 
-  public function getParser(ext:String):Parser {
-    return parsers.get(ext);
+  public function getFormatter(ext:String):Formatter {
+    return formatters.get(ext);
   }
 
   public function getRepository<T:Model>(factory:RepositoryFactory<T>):Repository<T> {
@@ -32,7 +32,7 @@ class Store {
   }
 
   function __load<T:{}>(path:String):{ info:Info, contents:T } {
-    for (ext => parser in parsers) {
+    for (ext => parser in formatters) {
       var resolved = path.withExtension(ext);
       if (connection.exists(resolved)) {
         var raw = connection.read(resolved);
@@ -46,7 +46,7 @@ class Store {
   }
 
   function __save<T:{}>(path:String, ext:String, content:T) {
-    var parser = parsers.get(ext);
+    var parser = formatters.get(ext);
     if (parser == null) throw 'No parser found';
     connection.write(path.withExtension(ext), parser.generate(content));
   }

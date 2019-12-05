@@ -8,7 +8,8 @@ typedef RepositoryOptions = {
   ?dataFile:String
 }; 
 
-// Todo: massively simplify
+#if !macro
+
 class Repository<T:Model> {
 
   final store:Store;
@@ -24,11 +25,7 @@ class Repository<T:Model> {
   }
 
   public function get(id:String):T {
-    var data = store.__load(if (options.isDirectory) {
-      Path.join([ options.path, id, options.dataFile ]);
-    } else {
-      Path.join([ options.path, id ]);
-    });
+    var data = store.__load(getPath(id));
     if (data != null) {
       return decoder(data.info, data.contents);
     }
@@ -40,24 +37,19 @@ class Repository<T:Model> {
   }
 
   public function save(model:T):Void {
-    var filePath = getPath(model._stitch_info);
-    store.__save(filePath, model._stitch_info.extension, encoder(model));
+    store.__save(
+      getPath(model._stitch_info.name),
+      model._stitch_info.extension,
+      encoder(model)
+    );
     // todo: update info?
   }
 
-  function getPath(info:Info) {
+  function getPath(id:String) {
     return if (options.isDirectory) {
-      Path.join(
-        [ options.path ]
-          .concat(info.path)
-          .concat([ info.name, options.dataFile ])
-      );
+      Path.join([ options.path, id, options.dataFile ]);
     } else {
-       Path.join(
-        [ options.path ]
-          .concat(info.path)
-          .concat([ info.name ])
-      );
+      Path.join([ options.path, id ]);
     }
   }
 
@@ -66,3 +58,9 @@ class Repository<T:Model> {
   }
 
 }
+
+#else 
+
+class Repository {}
+
+#end

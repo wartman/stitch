@@ -1,9 +1,9 @@
-package stitch2.parser;
+package stitch2.formatter;
 
 import haxe.Json;
-import stitch2.Parser;
+import stitch2.Formatter;
 
-class JsonParser implements Parser {
+class JsonFormatter implements Formatter {
 
   public function new() {}
 
