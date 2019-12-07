@@ -12,15 +12,19 @@ class MemoryConnection implements Connection {
   final data:FakeDirectory = { dirs: [], documents: [] };
 
   public function new(?raw:Map<String, Dynamic>) {
-    if (raw != null) for (id => value in raw) {
-      if (!Std.is(value, String)) { // uh
+    function create(id:String, value:Dynamic) {
+      if (Std.is(value, String)) { // uh
+        write(id, value);
+      } else {
         var sub:Map<String, String> = value;
         for (key => value in sub) {
-          write(Path.join([ id, key ]), value);
+          create(Path.join([ id, key ]), value);
         }
-      } else {
-        write(id, value);
       }
+    }
+    
+    if (raw != null) for (id => value in raw) {
+      create(id, value);
     }
   }
 
@@ -41,20 +45,15 @@ class MemoryConnection implements Connection {
     };
   }
 
-  public function listInfo(path:String):Array<Info> {
+  public function list(path:String):Array<String> {
     var parts = path.normalize().split('/');
     var dir = data;
     for (part in parts) {
       dir = dir.dirs.get(part);
       if (dir == null) return [];
     }
-    return [ for (file => _ in dir.documents) {
-      created: Date.now(),
-      modified: Date.now(),
-      extension: file.extension(),
-      path: parts,
-      name: file.withoutExtension()
-    } ];
+    return [ for (file => _ in dir.documents) file ]
+      .concat([ for (d => _ in dir.dirs) d ]);
   }
 
   public function exists(path:String):Bool {

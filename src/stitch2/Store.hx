@@ -26,9 +26,18 @@ class Store {
 
   public function getRepository<T:Model>(factory:RepositoryFactory<T>):Repository<T> {
     if (!repositories.exists(factory)) {
-      repositories.set(factory, factory._stitch_createRepository(this));
+      repositories.set(factory, factory.__createRepository(this));
     }
     return cast repositories.get(factory);
+  }
+
+  function __listIds(path:String):Array<String> {
+    return connection.list(path);
+  }
+
+  function __loadAll(path:String):Array<{ info:Info, contents:Dynamic }> {
+    var paths = __listIds(path);
+    return [ for (p in paths) __load(p) ];
   }
 
   function __load<T:{}>(path:String):{ info:Info, contents:T } {
@@ -46,9 +55,9 @@ class Store {
   }
 
   function __save<T:{}>(path:String, ext:String, content:T) {
-    var parser = formatters.get(ext);
-    if (parser == null) throw 'No parser found';
-    connection.write(path.withExtension(ext), parser.generate(content));
+    var formatter = formatters.get(ext);
+    if (formatter == null) throw new NoFormatterError(ext);
+    connection.write(path.withExtension(ext), formatter.generate(content));
   }
 
 }

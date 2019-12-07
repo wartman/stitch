@@ -5,7 +5,10 @@ package stitch2;
 @:allow(stitch2.Repository)
 @:autoBuild(stitch2.Model.build())
 interface Model {
-  private var _stitch_info:Info;
+  private var __info:Info;
+  private function __getId():String;
+  private function __resolveMappings(store:Store):Void;
+  private function __saveMappings(store:Store):Void;
 }
 
 #else
@@ -16,11 +19,10 @@ import haxe.macro.Type.ClassType;
 import stitch2.Repository.RepositoryOptions;
 
 using Lambda;
+using haxe.io.Path;
 using haxe.macro.TypeTools;
 using haxe.macro.ComplexTypeTools;
 
-// TODO: Id's should be built in and used to determine file names
-//       (or folder names, if needed).
 class Model {
   
   public static function build() {
@@ -30,9 +32,12 @@ class Model {
     ).export();
   }
 
+  var options:RepositoryOptions;
+  var idField:String;
   final fields:Array<Field>;
   final cls:ClassType;
-  var options:RepositoryOptions;
+  final resolveMappings:Array<Expr> = [];
+  final saveMappings:Array<Expr> = [];
   final modelFields:Array<Field> = [];
   final fieldObj:Array<Field> = [];
   final initObj:Array<ObjectField> = [];
@@ -66,11 +71,13 @@ class Model {
     var hasId = false;
     for (f in fields) {
       if (isId(f)) {
+        idField = f.name;
         hasId = true;
         break;
       }
     }
     if (hasId == false) {
+      idField = 'id';
       fields.push((macro class {
         @:id(auto) var id:String;
       }).fields[0]);
@@ -88,43 +95,54 @@ class Model {
 
     return (macro class {
 
-      public static function _stitch_createRepository(store:stitch2.Store) {
+      public static function __createRepository(store:stitch2.Store) {
         return new stitch2.Repository(store, {
           path: $v{options.path},
           isDirectory: $v{options.isDirectory},
+          defaultExtension: $v{options.defaultExtension},
           dataFile: $v{options.dataFile}
-        }, _stitch_decode, _stitch_encode);
+        }, __decode, __encode);
       }
 
-      public static function _stitch_decode(__i__:stitch2.Info, __f__) {
+      public static function __decode(__i__:stitch2.Info, __f__) {
         return new $tp(${ {
           expr: EObjectDecl(decode),
           pos: cls.pos
         } }, __i__);
       }
 
-      public static function _stitch_encode(__f__:$ct) {
+      public static function __encode(__f__:$ct) {
         return ${ {
           expr: EObjectDecl(encode),
           pos: cls.pos
         } };
       }
 
-      var _stitch_fields:$props;
-      var _stitch_info:stitch2.Info;
+      var __fields:$props;
+      var __info:stitch2.Info;
 
-      public function new(__f__:$props, ?_stitch_info) {
+      public function new(__f__:$props, ?__info) {
         // todo: better handle info: what should the behavior be for 
         //       `new` models? how do we figure out the name of the model?
         //       set the id?
-        this._stitch_info = _stitch_info == null ? {
+        this.__info = __info == null ? {
           name: null,
           path: [],
-          extension: '',
+          extension: null,
           created: Date.now(),
           modified: Date.now()
-        } : _stitch_info;
-        _stitch_fields = __f__;
+        } : __info;
+        __fields = __f__;
+      }
+
+      function __getId() return this.$idField;
+
+      function __resolveMappings(store:stitch2.Store) {
+        $b{resolveMappings};
+      }
+
+      function __saveMappings(store:stitch2.Store) {
+        $b{saveMappings};
       }
 
     }).fields;
@@ -137,13 +155,25 @@ class Model {
     var repo = meta.find(m -> m.name == ':repository');
     options = { 
       path: cls.name.toLowerCase(),
+      defaultExtension: 'txt',
       isDirectory: false,
       dataFile: '_data'
     };
     
     if (repo == null) return options;
 
-    for (p in repo.params) switch p {
+    return options = parseRepositoryOptions(repo.params);
+  }
+
+  function parseRepositoryOptions(params:Array<Expr>):RepositoryOptions {
+    var options:RepositoryOptions = {
+      path: null,
+      defaultExtension: null,
+      isDirectory: false,
+      dataFile: '_data'
+    };
+
+    for (p in params) switch p {
       case macro path = ${e}: switch e.expr {
         case EConst(CString(s, _)): options.path = s;
         default: Context.error('Repository path must be a string', e.pos);
@@ -152,6 +182,10 @@ class Model {
         case macro true: options.isDirectory = true;
         case macro false: options.isDirectory = false;
         default: Context.error('Must be bool', e.pos);
+      }
+      case macro defaultExtension = ${e}: switch e.expr {
+        case EConst(CString(s, _)): options.defaultExtension = s;
+        default: Context.error('Repository defaultExtension must be a string', e.pos);
       }
       case macro dataFile = ${e}: switch e.expr {
         case EConst(CString(s, _)): options.dataFile = s;
@@ -189,7 +223,7 @@ class Model {
         var prefix = getRepositoryOptions().path;
         isAuto = true; 
         modelFields.push((macro class {
-          static function _stitch_generateId() {
+          static function __generateId() {
             return stitch2.IdTools.getUniqueId($v{prefix});
           }
         }).fields[0]);
@@ -211,21 +245,21 @@ class Model {
       decode.push({
         field: name,
         expr: isAuto 
-          ? macro @:pos(f.pos) __f__.$name != null ? __f__.$name : _stitch_generateId()
+          ? macro @:pos(f.pos) __f__.$name != null ? __f__.$name : __generateId()
           : macro @:pos(f.pos) __f__.$name
       });
     } else {
       decode.push({
         field: name,
         expr: isAuto
-          ? macro @:pos(f.pos) __i__.$fromInfo != null ? __i__.$fromInfo : _stitch_generateId()
+          ? macro @:pos(f.pos) __i__.$fromInfo != null ? __i__.$fromInfo : __generateId()
           : macro @:pos(f.pos) __i__.$fromInfo
       });
     }
 
     modelFields.push((macro class {
       function $getterName() {
-        return _stitch_fields.$name;
+        return __fields.$name;
       }
     }).fields[0]);
   }
@@ -251,7 +285,7 @@ class Model {
     modelFields.push((macro class {
 
       function $getterName() {
-        return _stitch_info.$name;
+        return __info.$name;
       }
 
     }).fields[0]);
@@ -262,11 +296,49 @@ class Model {
   }
 
   function parseChildren(f:Field, t:ComplexType, params:Array<Expr>) {
+    if (t == null) {
+      Context.error('`@:children` properties require a type', f.pos);
+    }
+    f.kind = FProp('get', 'never', t, null);
+    if (!f.access.has(APublic)) f.access.push(APublic);
+
     var options = getRepositoryOptions();
     if (!options.isDirectory) {
       var meta = f.meta.find(m -> m.name == ':children');
       Context.error('`:children` is only allowed on models that map to directories', meta.pos);
     }
+    var overrides = parseRepositoryOptions(params);
+    var name = f.name;
+    var getterName = 'get_${f.name}';
+    var clsPath = switch Context.parse('(null:${t.toString()})', f.pos) {
+      case macro (null:Array<$t>): 
+        if (!Context.unify(t.toType(), Context.getType('stitch2.Model'))) {
+          Context.error('@:children fields must unify with Array<stitch2.Model>', f.pos);
+        }
+        t.toString().split('.');
+      default: 
+        Context.error('@:children expects an array', f.pos);
+        [];
+    }
+    var path = overrides.path != null ? overrides.path : name;
+    var ext = overrides.defaultExtension != null ? overrides.defaultExtension : options.defaultExtension;
+
+    addFieldType(name, t, true, f.pos);
+    resolveMappings.push(macro @:pos(f.pos) this.__fields.$name = store.getRepository($p{clsPath}).withOverrides({
+      path: haxe.io.Path.join([ $v{options.path}, __getId(), $v{path} ]),
+      defaultExtension: $v{ext}
+    }).all());
+
+    saveMappings.push(macro @:pos(f.pos) for (m in this.$name) store.getRepository($p{clsPath}).withOverrides({
+      path: haxe.io.Path.join([ $v{options.path}, __getId(), $v{path} ]),
+      defaultExtension: $v{ext}
+    }).save(m));
+
+    modelFields.push((macro class {
+      function $getterName() {
+        return __fields.$name;
+      }
+    }).fields[0]);
   }
 
   function isField(f:Field) {
@@ -326,15 +398,15 @@ class Model {
 
     decode.push({
       field: f.name,
-      expr: macro @:pos(f.pos) ${transformer}._stitch_decode(__i__, __f__.$name)
+      expr: macro @:pos(f.pos) ${transformer}.__decode(__i__, __f__.$name)
     });
     encode.push({
       field: f.name,
-      expr: macro @:pos(f.pos) ${transformer}._stitch_encode(__f__.$name)
+      expr: macro @:pos(f.pos) ${transformer}.__encode(__f__.$name)
     });
     modelFields.push((macro class {
       function $getterName() {
-        return _stitch_fields.$name;
+        return __fields.$name;
       }
     }).fields[0]);
   }
@@ -346,17 +418,6 @@ class Model {
     return f.meta.find(m -> m.name == name).params;
   }
 
-  // static function parseRepository(cls:ClassType):Field {
-  //   return {
-  //     name: '_stitch_createRepository',
-  //     access: [ APublic, AStatic ],
-  //     kind: FFun({
-  //       expr: macro null,
-  //       ret: macro:stitch2.Repository<$tp>
-  //     })
-  //   };
-  // }
-  
 }
 
 #end

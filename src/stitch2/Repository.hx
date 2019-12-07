@@ -3,7 +3,8 @@ package stitch2;
 using haxe.io.Path;
 
 typedef RepositoryOptions = {
-  path:String,
+  ?path:String,
+  ?defaultExtension:String,
   ?isDirectory:Bool,
   ?dataFile:String
 }; 
@@ -24,25 +25,53 @@ class Repository<T:Model> {
     this.encoder = encoder;
   }
 
+  public function withOverrides(overrides:RepositoryOptions) {
+    return new Repository(store, {
+      path: overrides.path != null ? overrides.path : options.path,
+      defaultExtension: overrides.defaultExtension != null ? overrides.defaultExtension : options.defaultExtension,
+      isDirectory: overrides.isDirectory != null ? overrides.isDirectory : options.isDirectory,
+      dataFile: overrides.dataFile != null ? overrides.dataFile : options.dataFile
+    }, decoder, encoder);
+  }
+
   public function get(id:String):T {
     var data = store.__load(getPath(id));
     if (data != null) {
-      return decoder(data.info, data.contents);
+      var model = decoder(prepareInfo(data.info), data.contents);
+      model.__resolveMappings(store);
+      return model;
     }
-    throw 'No model found with the id ${id}'; // or something
-  }
-
-  public function all():Selection<T> {
     return null;
   }
 
+  public function all():Array<T> {
+    return [ for (id in store.__listIds(options.path)) get(id) ];
+  }
+
   public function save(model:T):Void {
+    var path = getPath(model.__getId());
     store.__save(
-      getPath(model._stitch_info.name),
-      model._stitch_info.extension,
+      path,
+      resolveExtension(model),
       encoder(model)
     );
-    // todo: update info?
+    model.__saveMappings(store);
+    model.__info = prepareInfo(store.connection.getInfo(path));
+  }
+
+  public function remove(model:T):Bool {
+    return false;
+  }
+  
+  function prepareInfo(info:Info):Info {
+    if (!options.isDirectory) return info;
+    return {
+      name: info.path[ info.path.length - 1 ],
+      path: info.path.slice(0, info.path.length - 1),
+      created: info.created,
+      modified: info.modified,
+      extension: info.extension
+    };
   }
 
   function getPath(id:String) {
@@ -53,8 +82,11 @@ class Repository<T:Model> {
     }
   }
 
-  public function remove(model:T):Bool {
-    return false;
+  function resolveExtension(model:Model) {
+    if (model.__info.extension == null) {
+      return options.defaultExtension;
+    }
+    return model.__info.extension;
   }
 
 }

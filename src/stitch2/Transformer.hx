@@ -7,6 +7,6 @@ package stitch2;
   Note that all Models are Transformers.
 **/
 typedef Transformer<From, To> = {
-  public function _stitch_decode(info:Info, data:From):To;
-  public function _stitch_encode(data:To):From;
+  public function __decode(info:Info, data:From):To;
+  public function __encode(data:To):From;
 }
