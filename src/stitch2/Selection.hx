@@ -3,23 +3,19 @@ package stitch2;
 using Lambda;
 using haxe.ds.Option;
 
-enum SortDir {
-  Asc;
-  Desc;
-}
+// enum SortDir {
+//   Asc;
+//   Desc;
+// }
 
-class Selection<T:Model> {
+abstract Selection<T:Model>(Array<T>) {
 
-  final repository:Repository<T>;
-  final models:Array<T>;
-
-  public function new(repository, ?models) {
-    this.repository = repository;
-    this.models = models != null ? models : [];
+  public inline function new(models) {
+    this = models;
   }
 
   public function find(id:String):Option<T> {
-    var model = models.find(m -> m.__getId() == id);
+    var model = this.find(m -> m.__getId() == id);
     return if (model == null) {
       None;
     } else {
@@ -28,23 +24,23 @@ class Selection<T:Model> {
   }
 
   public function result():Option<Array<T>> {
-    return if (models.length == 0) {
+    return if (this.length == 0) {
       None;
     } else {
-      Some(models);
+      Some(this);
     }
   }
 
   public function where(query:(model:T)->Bool) {
-    return new Selection(repository, models.filter(query));
+    return new Selection(this.filter(query));
   }
 
-  public function all() {
-    return models;
+  public inline function all():Array<T> {
+    return this;
   }
 
   public function first() {
-    return models[models.length - 1];
+    return this[this.length - 1];
   }
 
   public function limit(len:Int) {
@@ -52,7 +48,7 @@ class Selection<T:Model> {
   }
 
   public function slice(pos:Int, ?end:Int) {
-    return new Selection(repository, models.slice(pos, end));
+    return new Selection(this.slice(pos, end));
   }
 
 }

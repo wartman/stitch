@@ -46,7 +46,7 @@ class Repository<T:Model> {
   }
 
   public function select():Selection<T> {
-    return new Selection(this, all());
+    return new Selection(all());
   }
 
   public function all():Array<T> {

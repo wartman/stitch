@@ -613,12 +613,13 @@ class Model {
 
     if (transformer == null) {
       if (Context.unify(t.toType(), Context.getType('stitch2.Markdown'))) {
+        // todo: this feels off.
         transformer = macro @:pos(f.pos) stitch2.transformer.MarkdownTransformer;
-      } else if (Context.unify(t.toType(), Context.getType('stitch2.Model'))) {
+      } else if (isModel(t)) {
         // todo: how should sub-model ids be set?
         // todo: is there a less daft way to get the type here?
         transformer = macro @:pos(f.pos) $p{t.toString().split('.')};
-      } else if (Context.unify(t.toType(), Context.getType('Array<stitch2.Model>'))) {
+      } else if (isModelArray(t)) {
         // todo
       }
     }
@@ -627,7 +628,7 @@ class Model {
       Context.error(
         'No transformer found for field ${f.name}. Provide one with '
         + '`@:field(transformer = ...)`, or ensure it is a String, Int, '
-        + 'Float or Bool',
+        + 'Float, Bool or a stitch2.Model',
         f.pos
       );
     }

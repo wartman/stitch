@@ -38,6 +38,7 @@ class Test2 {
     var test = testers.get('one');
     trace(test.subs);
     trace(test);
+    trace(test.sub.content);
     trace(test.author);
     trace(test.author.testers);
 
@@ -49,27 +50,18 @@ class Test2 {
       // author: store.getRepository(User).get('fred'),
       sub: new Sub({
         bin: 1,
-        content: {
-          raw: '##test',
-          parsed: ''
-        }
+        content: '##test'
       }),
       subs: [
         new Sub({
           key: 'three',
           bin: 1,
-          content: {
-            raw: '##test',
-            parsed: ''
-          }
+          content: '##test'
         }),
         new Sub({
           key: 'four',
           bin: 4,
-          content: {
-            raw: '##testear',
-            parsed: ''
-          }
+          content:'##testear'
         })
       ]
     }));
