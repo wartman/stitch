@@ -1,8 +1,8 @@
 package stitch2;
-
 #if !macro
 
 @:allow(stitch2.Repository)
+@:allow(stitch2.Selection)
 @:autoBuild(stitch2.Model.build())
 interface Model {
   private var __info:Info;
@@ -12,6 +12,9 @@ interface Model {
 }
 
 #else
+
+// TODO:
+// DRY this mess up, especially all the relation stuff.
 
 import haxe.macro.Context;
 import haxe.macro.Expr;
@@ -61,6 +64,12 @@ class Model {
         parseId(f, t, e, getFieldParams(f, ':id'));
       case FVar(t, e) if (isChildren(f)):
         parseChildren(f, t, getFieldParams(f, ':children'));
+      case FVar(t, e) if (isBelongsTo(f)):
+        parseBelongsTo(f, t, getFieldParams(f, ':belongsTo'));
+      case FVar(t, e) if (isHasOne(f)):
+        parseHasOne(f, t, getFieldParams(f, ':hasOne'));
+      case FVar(t, e) if (isHasMany(f)):
+        parseHasMany(f, t, getFieldParams(f, ':hasMany'));
       default:
     }
 
@@ -122,9 +131,6 @@ class Model {
       var __info:stitch2.Info;
 
       public function new(__f__:$props, ?__info) {
-        // todo: better handle info: what should the behavior be for 
-        //       `new` models? how do we figure out the name of the model?
-        //       set the id?
         this.__info = __info == null ? {
           name: null,
           path: [],
@@ -257,11 +263,13 @@ class Model {
       });
     }
 
-    modelFields.push((macro class {
+    add((macro class {
+
       function $getterName() {
         return __fields.$name;
       }
-    }).fields[0]);
+
+    }).fields);
   }
 
   function isInfo(f:Field) {
@@ -282,13 +290,13 @@ class Model {
       default: Context.error('Param must be a string or an identifier', param.pos);
     }
 
-    modelFields.push((macro class {
+    add((macro class {
 
       function $getterName() {
         return __info.$name;
       }
 
-    }).fields[0]);
+    }).fields);
   }
 
   function isChildren(f:Field) {
@@ -298,6 +306,9 @@ class Model {
   function parseChildren(f:Field, t:ComplexType, params:Array<Expr>) {
     if (t == null) {
       Context.error('`@:children` properties require a type', f.pos);
+    }
+    if (!isModelArray(t)) {
+      Context.error('@:children fields must unify with Array<stitch2.Model>', f.pos);
     }
     f.kind = FProp('get', 'never', t, null);
     if (!f.access.has(APublic)) f.access.push(APublic);
@@ -310,21 +321,14 @@ class Model {
     var overrides = parseRepositoryOptions(params);
     var name = f.name;
     var getterName = 'get_${f.name}';
-    var clsPath = switch Context.parse('(null:${t.toString()})', f.pos) {
-      case macro (null:Array<$t>): 
-        if (!Context.unify(t.toType(), Context.getType('stitch2.Model'))) {
-          Context.error('@:children fields must unify with Array<stitch2.Model>', f.pos);
-        }
-        t.toString().split('.');
-      default: 
-        Context.error('@:children expects an array', f.pos);
-        [];
-    }
+    var clsPath = getModelType(t, f.pos).toString().split('.');
+    var mapping = '__mapping_${name}';
     var path = overrides.path != null ? overrides.path : name;
     var ext = overrides.defaultExtension != null ? overrides.defaultExtension : options.defaultExtension;
 
     addFieldType(name, t, true, f.pos);
-    resolveMappings.push(macro @:pos(f.pos) this.__fields.$name = store.getRepository($p{clsPath}).withOverrides({
+
+    resolveMappings.push(macro @:pos(f.pos) this.$mapping = () -> this.__fields.$name = store.getRepository($p{clsPath}).withOverrides({
       path: haxe.io.Path.join([ $v{options.path}, __getId(), $v{path} ]),
       defaultExtension: $v{ext}
     }).all());
@@ -334,11 +338,247 @@ class Model {
       defaultExtension: $v{ext}
     }).save(m));
 
-    modelFields.push((macro class {
+    add((macro class {
+
       function $getterName() {
+        if (__fields.$name == null && this.$mapping != null) {
+          __fields.$name = this.$mapping();
+        }
         return __fields.$name;
       }
-    }).fields[0]);
+
+      var $mapping:()->$t;
+
+    }).fields);
+  }
+
+  function isBelongsTo(f:Field) {
+    return f.meta.exists(m -> m.name == ':belongsTo');
+  }
+
+  function parseBelongsTo(f:Field, t:ComplexType, params:Array<Expr>) {
+    if (t == null) {
+      Context.error('`@:belongsTo` properties require a type', f.pos);
+    }
+    if (!isModel(t)) {
+      Context.error('@:belongsTo must be a stitch2.Model', f.pos);
+    }
+    f.kind = FProp('get', 'never', t, null);
+    if (!f.access.has(APublic)) f.access.push(APublic);
+
+    var name = f.name;
+    var relationName = '${name}_id';
+    var getterName = 'get_${f.name}';
+    var clsPath = t.toString().split('.');
+    var overrides = macro {};
+
+    for (param in params) switch param {
+      case macro path = ${e}: switch e.expr {
+        case EConst(CString(s, _)):
+          overrides = macro { path: $v{s} };
+        default:
+          Context.error('`path` must be a string', e.pos);
+      }
+      case macro on = ${e}: switch e.expr {
+        case EConst(CIdent(s)) | EConst(CString(s, _)):
+          relationName = s;
+        default:
+          Context.error('`on` must be a string or an identifier', e.pos);
+      }
+      default:
+        Context.error('Invalid @:belongsTo option', param.pos);
+    }
+
+    // todo: check if optional
+    addFieldType(relationName, macro:String, true, f.pos);
+    addFieldType(name, t, true, f.pos);
+
+    decode.push({
+      field: relationName,
+      expr: macro @:pos(f.pos) stitch2.transformer.StringTransformer.__decode(__i__, __f__.$relationName)
+    });
+    encode.push({
+      field: relationName,
+      expr: macro @:pos(f.pos) __f__.$name != null ? @:privateAccess __f__.$name.__getId() : @:privateAccess __f__.__fields.$relationName
+    });
+    
+    var relationGetter = 'get_${relationName}';
+    var relationSetter = 'set_${relationName}';
+    var mapping = '__mapping_${name}';
+
+    resolveMappings.push(
+      macro @:pos(f.pos) this.$mapping = () -> store.getRepository($p{clsPath})
+        .withOverrides(${overrides})
+        .get(__fields.$relationName)
+    );
+
+    add((macro class {
+
+      function $getterName() {
+        if (__fields.$name == null && this.$mapping != null) {
+          __fields.$name = this.$mapping();
+        }
+        return __fields.$name;
+      }
+
+      var $mapping:()->$t;
+      
+      public var $relationName(get, set):String;
+
+      function $relationGetter() {
+        return __fields.$relationName;
+      }
+
+      function $relationSetter(value) {
+        return __fields.$relationName = value;
+      }
+
+    }).fields);
+  }
+
+  function isHasOne(f:Field) {
+    return f.meta.exists(m -> m.name == ':hasOne');
+  }
+
+  function parseHasOne(f:Field, t:ComplexType, params:Array<Expr>) {
+    if (t == null) {
+      Context.error('`@:hasOne` properties require a type', f.pos);
+    }
+    if (!isModel(t)) {
+      Context.error('@:hasOne must be a stitch2.Model', f.pos);
+    }
+    f.kind = FProp('get', 'never', t, null);
+    if (!f.access.has(APublic)) f.access.push(APublic);
+    
+    var name = f.name;
+    var relationName = '${cls.name.toLowerCase()}_id';
+    var getterName = 'get_${f.name}';
+    var clsPath = t.toString().split('.');
+    var overrides = macro {};
+    
+    for (param in params) switch param {
+      case macro path = ${e}: switch e.expr {
+        case EConst(CString(s, _)):
+          overrides = macro { path: $v{s} };
+        default:
+          Context.error('`path` must be a string', e.pos);
+      }
+      case macro on = ${e}: switch e.expr {
+        case EConst(CIdent(s)) | EConst(CString(s, _)):
+          relationName = s;
+        default:
+          Context.error('`on` must be a string or an identifier', e.pos);
+      }
+      default:
+        Context.error('Invalid @:hasOne option', param.pos);
+    }
+
+    // todo: check if optional
+    addFieldType(name, t, true, f.pos);
+
+    var mapping = '__mapping_${name}';
+    
+    resolveMappings.push(
+      macro @:pos(f.pos) this.$mapping = () -> store.getRepository($p{clsPath})
+        .withOverrides(${overrides})
+        .select()
+        .where(m -> m.$relationName == this.__getId())
+        .first()
+    );
+
+    saveMappings.push(
+      macro @:pos(f.pos) if (this.$name != null && this.$name.$relationName != this.__getId()) {
+        this.$name.$relationName = this.__getId();
+        store.getRepository($p{clsPath}).withOverrides(${overrides}).save(this.$name);
+      }
+    );
+
+    add((macro class {
+
+      function $getterName() {
+        if (__fields.$name == null && this.$mapping != null) {
+          __fields.$name = this.$mapping();
+        }
+        return __fields.$name;
+      }
+
+      var $mapping:()->$t;
+
+    }).fields);
+  }
+
+  function isHasMany(f:Field) {
+    return f.meta.exists(m -> m.name == ':hasMany');
+  }
+
+  function parseHasMany(f:Field, t:ComplexType, params:Array<Expr>) {
+    if (t == null) {
+      Context.error('`@:hasMany` properties require a type', f.pos);
+    }
+    if (!isModelArray(t)) {
+      Context.error('@:hasMany must be an array of stitch2.Model', f.pos);
+    }
+    f.kind = FProp('get', 'never', t, null);
+    if (!f.access.has(APublic)) f.access.push(APublic);
+    
+    var name = f.name;
+    var relationName = '${cls.name.toLowerCase()}_id';
+    var getterName = 'get_${f.name}';
+    var clsPath = getModelType(t, f.pos).toString().split('.');
+    var overrides = macro {};
+    
+    for (param in params) switch param {
+      case macro path = ${e}: switch e.expr {
+        case EConst(CString(s, _)):
+          overrides = macro { path: $v{s} };
+        default:
+          Context.error('`path` must be a string', e.pos);
+      }
+      case macro on = ${e}: switch e.expr {
+        case EConst(CIdent(s)) | EConst(CString(s, _)):
+          relationName = s;
+        default:
+          Context.error('`on` must be a string or an identifier', e.pos);
+      }
+      default:
+        Context.error('Invalid @:hasOne option', param.pos);
+    }
+
+    // todo: check if optional
+    addFieldType(name, t, true, f.pos);
+
+    var mapping = '__mapping_${name}';
+    
+    resolveMappings.push(
+      macro @:pos(f.pos) this.$mapping = () -> store.getRepository($p{clsPath})
+        .withOverrides(${overrides})
+        .select()
+        .where(m -> m.$relationName == this.__getId())
+        .all()
+    );
+
+    saveMappings.push(
+      macro @:pos(f.pos) if (this.$name != null) {
+        var __r = store.getRepository($p{clsPath}).withOverrides(${overrides});
+        for (m in this.$name) if (m.$relationName != this.__getId()) {
+          m.$relationName = this.__getId();
+          __r.save(m);
+        }
+      }
+    );
+  
+    add((macro class {
+
+      function $getterName() {
+        if (__fields.$name == null && this.$mapping != null) {
+          __fields.$name = this.$mapping();
+        }
+        return __fields.$name;
+      }
+
+      var $mapping:()->$t;
+
+    }).fields);
   }
 
   function isField(f:Field) {
@@ -349,11 +589,12 @@ class Model {
     if (t == null) {
       Context.error('`@:field` properties require a type', f.pos);
     }
-    f.kind = FProp('get', 'never', t, null);
+    f.kind = FProp('get', 'set', t, null);
     if (!f.access.has(APublic)) f.access.push(APublic);
 
     var name = f.name;
     var getterName = 'get_${f.name}';
+    var setterName = 'set_${f.name}';
     var transformer = switch t.toString() {
       case 'String': macro @:pos(f.pos) stitch2.transformer.StringTransformer;
       case 'Int': macro @:pos(f.pos) stitch2.transformer.IntTransformer;
@@ -400,15 +641,24 @@ class Model {
       field: f.name,
       expr: macro @:pos(f.pos) ${transformer}.__decode(__i__, __f__.$name)
     });
+
     encode.push({
       field: f.name,
       expr: macro @:pos(f.pos) ${transformer}.__encode(__f__.$name)
     });
-    modelFields.push((macro class {
+
+    add((macro class {
+      
       function $getterName() {
         return __fields.$name;
       }
-    }).fields[0]);
+
+      function $setterName(value) {
+        __fields.$name = value;
+        return value;
+      }
+
+    }).fields);
   }
 
   function getFieldParams(f:Field, name:String) {
@@ -416,6 +666,27 @@ class Model {
       Context.error('Only one `@${name}` metadata is allowed per property', f.pos);
     }
     return f.meta.find(m -> m.name == name).params;
+  }
+
+  function getModelType(t:ComplexType, pos:Position) {
+    return switch Context.parse('(null:${t.toString()})', pos) {
+      case macro (null:Array<$mt>): mt;
+      default: t;
+    }
+  }
+
+  function isModel(t:ComplexType) {
+    return Context.unify(t.toType(), Context.getType('stitch2.Model'));
+  }
+
+  function isModelArray(t:ComplexType) {
+    return 
+      Context.unify(t.toType(), Context.getType('Array'))
+      && isModel(getModelType(t, Context.currentPos()));
+  }
+
+  function add(fields:Array<Field>) {
+    for (f in fields) modelFields.push(f);
   }
 
 }

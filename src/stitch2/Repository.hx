@@ -17,6 +17,7 @@ class Repository<T:Model> {
   final options:RepositoryOptions;
   final decoder:(info:Info, data:Dynamic)->T;
   final encoder:(data:T)->Dynamic;
+  var cache:Array<T>;
 
   public function new(store, options, decoder, encoder) {
     this.store = store;
@@ -44,11 +45,19 @@ class Repository<T:Model> {
     return null;
   }
 
+  public function select():Selection<T> {
+    return new Selection(this, all());
+  }
+
   public function all():Array<T> {
-    return [ for (id in store.__listIds(options.path)) get(id) ];
+    if (cache == null) {
+      cache = [ for (id in store.__listIds(options.path)) get(id) ];
+    }
+    return cache;
   }
 
   public function save(model:T):Void {
+    invalidateCache();
     var path = getPath(model.__getId());
     store.__save(
       path,
@@ -59,8 +68,14 @@ class Repository<T:Model> {
     model.__info = prepareInfo(store.connection.getInfo(path));
   }
 
-  public function remove(model:T):Bool {
-    return false;
+  public function remove(model:T):Void {
+    invalidateCache();
+    // Note: even if this is a directory-based model, we want to remove
+    //       the entire dir, not just the dataFile.
+    var path = Path
+      .join([ options.path, model.__getId() ])
+      .withExtension(resolveExtension(model));
+    store.__remove(path);
   }
   
   function prepareInfo(info:Info):Info {
@@ -87,6 +102,10 @@ class Repository<T:Model> {
       return options.defaultExtension;
     }
     return model.__info.extension;
+  }
+
+  function invalidateCache() {
+    cache = null;
   }
 
 }

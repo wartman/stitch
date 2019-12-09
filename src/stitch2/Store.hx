@@ -60,4 +60,8 @@ class Store {
     connection.write(path.withExtension(ext), formatter.generate(content));
   }
 
+  function __remove(path:String) {
+    if (connection.exists(path)) connection.remove(path);
+  }
+
 }

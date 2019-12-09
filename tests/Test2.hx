@@ -11,6 +11,7 @@ class Test2 {
           '_data.json' => '{
             "foo": "foo",
             "bar": "bar",
+            "author_id": "fred",
             "sub": {
               "bin": "1",
               "content": "###foo"
@@ -23,19 +24,29 @@ class Test2 {
             "content": "##bar"
           }'
         ]
+      ],
+      'users' => [
+        'fred.json' => '{
+          "name": "fred",
+          "lastName": "fredson"
+        }'
       ]
     ]), [
       'json' => new JsonFormatter()
     ]);
     var testers = store.getRepository(Tester);
     var test = testers.get('one');
-    trace(test);
     trace(test.subs);
+    trace(test);
+    trace(test.author);
+    trace(test.author.testers);
 
     testers.save(new Tester({
       id: 'two',
       foo: 'bar',
       bar: 'bar',
+      author_id: 'fred',
+      // author: store.getRepository(User).get('fred'),
       sub: new Sub({
         bin: 1,
         content: {
@@ -62,7 +73,7 @@ class Test2 {
         })
       ]
     }));
-    trace(testers.get('two').subs);
+    trace(testers.get('two'));
   }
 
 }
@@ -80,10 +91,24 @@ class Tester implements Model {
   @:field var bar:String;
   @:field var sub:Sub;
   @:children(path = 'test_subs') var subs:Array<Sub>;
+  @:belongsTo var author:User;
 }
 
 class Sub implements Model {
   @:id(info, auto) var key:String;
   @:field var bin:Int;
   @:field var content:Markdown;
+}
+
+@:repository(
+  path = 'users',
+  defaultExtension = 'json'
+)
+class User implements Model {
+  @:id(info, auto) var id:String;
+  @:info var created:Date;
+  @:info(modified) var updated:Date;
+  @:field var name:String;
+  @:field var lastName:String;
+  @:hasMany(on = 'author_id') var testers:Array<Tester>;
 }
