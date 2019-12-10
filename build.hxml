@@ -5,6 +5,7 @@
 -lib medic
 -lib hxnodejs
 -lib yaml
+-lib toml
 # -main Test
 -main Test2
 

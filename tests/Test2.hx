@@ -1,6 +1,6 @@
 import stitch2.*;
 import stitch2.connection.MemoryConnection;
-import stitch2.formatter.JsonFormatter;
+import stitch2.formatter.*;
 
 class Test2 {
   
@@ -23,16 +23,35 @@ class Test2 {
             "bin": "3",
             "content": "##bar"
           }'
+        ],
+        'three' => [
+          '_data.toml' => '
+            foo = "two"
+            bar = "bin"
+            author_id = "ben"
+            sub.bin = "2"
+            sub.content = """
+Foo
+---
+- Is a bar
+- Not a bin
+            """
+          '
         ]
       ],
       'users' => [
         'fred.json' => '{
           "name": "fred",
           "lastName": "fredson"
-        }'
+        }',
+        'ben.toml' => '
+          name = "Ben"
+          lastName = "Benson"
+        '
       ]
     ]), [
-      'json' => new JsonFormatter()
+      'json' => new JsonFormatter(),
+      'toml' => new TomlFormatter()
     ]);
     var testers = store.getRepository(Tester);
     var test = testers.get('one');
@@ -41,6 +60,13 @@ class Test2 {
     trace(test.sub.content);
     trace(test.author);
     trace(test.author.testers);
+
+    trace(testers.get('three').foo);
+    var three = testers.get('three');
+    three.foo = 'three';
+    testers.save(three);
+    trace(testers.get('three').foo);
+    trace(testers.get('three').sub.content);
 
     testers.save(new Tester({
       id: 'two',

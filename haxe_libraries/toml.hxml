@@ -1,0 +1,4 @@
+# @install: lix --silent download "gh://github.com/wartman/toml#e14d120caae2fd39bca86e83a103a3c68426bde6" into toml/0.0.0/github/e14d120caae2fd39bca86e83a103a3c68426bde6
+-lib medic
+-cp ${HAXE_LIBCACHE}/toml/0.0.0/github/e14d120caae2fd39bca86e83a103a3c68426bde6/src
+-D toml=0.0.0
