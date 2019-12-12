@@ -1,0 +1,11 @@
+-cp src
+-cp tests
+
+-lib markdown
+-lib medic
+-lib hxnodejs
+-lib yaml
+-lib toml
+-main Test
+
+-js dist/test.js

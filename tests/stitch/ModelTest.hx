@@ -1,7 +1,7 @@
 package stitch;
 
-import stitch.field.*;
 import stitch.formatter.*;
+import stitch.types.Markdown;
 import stitch.connection.MemoryConnection;
 
 using medic.Assert;
@@ -10,166 +10,143 @@ class ModelTest {
 
   public function new() {}
 
-  function createTestStore() {
+  function getStore() {
     var connection = new MemoryConnection([
-      'children/foo.txt' => "value: foo",
-      'children/foo/children' => [
-        'foo.txt' => 'value: foo',
-        'bar.txt' => 'value: bar'
+      'tests' => [
+        'one' => [
+          '_data.json' => '{
+            "foo": "foo",
+            "bar": "bar",
+            "author_id": "fred",
+            "sub": {
+              "bin": "1",
+              "content": "###foo"
+            }
+          }'
+        ],
+        'one/test_subs' => [
+          'subone.json' => '{
+            "bin": "3",
+            "content": "##bar"
+          }'
+        ],
+        'two' => [
+          '_data.toml' => '
+            foo = "two"
+            bar = "bin"
+            author_id = "fred"
+            sub.bin = "2"
+            sub.content = """
+Foo
+---
+- Is a bar
+- Not a bin
+            """
+          '
+        ]
       ],
-      'folder/foo' => [ 
-        '_info.txt' => 'value:foo'
-      ],
-      'folder/foo/children' => [
-        'foo.txt' => 'value: foo',
-        'bar.txt' => 'value: bar'
-      ],
-      'folder/foo/stuff' => [
-        'foo/_info.txt' => 'value: foo',
-        'bar/_info.txt' => 'value: bar',
-        'bin/_info.txt' => 'value: bin'
-      ],
-      'repeat/foo.txt' => "
-        name: foo
-        ---
-        items[]: foo
-        ---
-        items[]: bar
-      "
+      'users' => [
+        'fred.json' => '{
+          "name": "Fred",
+          "lastName": "Fredson"
+        }',
+        'ben.toml' => '
+          name = "Ben"
+          lastName = "Benson"
+        ',
+        'random.txt' => '
+          name: Rando
+          ---
+          lastName: Randson
+        '
+      ]
     ]);
-    return new Store(connection);
+    return new Store(connection, [
+      'json' => new JsonFormatter(),
+      'toml, tml' => new TomlFormatter(),
+      'txt' => new TextFormatter()
+    ]);
   }
 
   @test('Info is applied correctly')
   public function testInfo() {
-    TestModel.collection.path.equals('test');
+    var store = getStore();
+    store.getRepository(TestModel).getOptions().path.equals('tests');
   }
 
-  @test('Id is created automatically')
-  public function testAutoId() {
-    var model = new TestModel({ 
-      id: 'foo',
-      foo: 'foo',
-      bar: 'bar'
-    });
-    model.id.equals('foo');
+  @test('Finds models by id')
+  public function testFind() {
+    var store = getStore();
+    var one = store.getRepository(TestModel).get('one');
+    one.id.equals('one');
   }
 
-  @test('Model can be created from Documents')
-  public function testFactory() {
-    var time = Date.now();
-    var model = TestModel.collection.factory({
-      name: 'name',
-      path: 'some/path/to/name',
-      contents: '
-        foo: foo
-        ---
-        bar: bar
-      ',
-      created: time,
-      modified: time
-    });
-    model.id.equals('name');
-    model.foo.equals('foo');
-    model.bar.equals('bar');
-    model.created.equals(time);
+  @test('Parses inline models')
+  public function testInlineModel() {
+    var store = getStore();
+    var one = store.getRepository(TestModel).get('one');
+    Std.is(one.sub, Sub).isTrue();
+    one.sub.bin.equals(1);
   }
 
-  @test('Model will prefer parsed contents if available')
-  public function testFactoryWithParsedContents() {
-    var time = Date.now();
-    var model = TestModel.collection.factory({
-      name: 'name',
-      path: 'some/path/to/name',
-      contents: '',
-      parsedContents: {
-        foo: 'foo',
-        bar: 'bar'
-      },
-      created: time,
-      modified: time
-    });
-    model.id.equals('name');
-    model.foo.equals('foo');
-    model.bar.equals('bar');
-    model.created.equals(time);
-  }
-
-  @test('Children fields?')
+  @test('Loads children lazily')
   public function testChildren() {
-    var store = createTestStore();
-    store.get(ChildrenModel).find('foo').children.all().length.equals(2);
+    var one = getStore().getRepository(TestModel).get('one');
+    one.subs.length.equals(1);
   }
 
-  @test('Can be used as folders')
-  public function testFolder() {
-    var store = createTestStore();
-    store.get(FolderModel).find('foo').value.equals('foo');
-    store.get(FolderModel).find('foo').children.all().length.equals(2);
-    store.get(FolderModel).find('foo').foldered.all().length.equals(3);
+  @test('Finds @:belongsTo relations')
+  public function testBelongsTo() {
+    var one = getStore().getRepository(TestModel).get('one');
+    Std.is(one.author, User).isTrue();
+    one.author_id.equals(one.author.id);
+    one.author.name.equals('Fred');
   }
 
-  @test('Can be serialized to JSON')
-  public function testJson() {
-    var model = new TestModel({ 
-      id: 'foo',
-      foo: 'foo',
-      bar: 'bar'
-    });
-    var json:{ id:String, foo:String, bar:String, created:Date, modified:Date } = model.toJson();
-    json.id.equals('foo');
-    json.foo.equals('foo');
-    json.bar.equals('bar');
+  @test('Finds @:hasMany relations')
+  public function testHasMany() {
+    var fred = getStore().getRepository(User).get('fred');
+    Std.is(fred.testers, Array).isTrue();
+    fred.testers.length.equals(2);
+    fred.testers[0].id.equals('one');
+    fred.testers[1].id.equals('two');
   }
-
-  @test('Reads repeatable fields')
-  public function testRepeatable() {
-    var store = createTestStore();
-    var model = store.get(RepeatableModel).find('foo');
-    model.name.equals('foo');
-    model.items.length.equals(2);
-    model.items[0].equals('foo');
-  }
-
-  // todo: test using other formatters and stuff?
-  //       And fields getting info from the right places?
 
 }
 
-@Collection( path = "test" )
-private class TestModel implements Model {
-  @StringField public var foo:String;
-  @StringField public var bar:String;
-  @DocumentField( 
-    handler = doc -> doc.created,
-    fallback = () -> Date.now()  
-  ) public var created:Date;
-  @DocumentField( 
-    handler = doc -> doc.modified,
-    fallback = () -> Date.now()
-  ) public var modified:Date;
-}
 
-@Collection( path = "children" )
-private class ChildrenModel implements Model {
-  @StringField public var value:String;
-  @DocumentField( handler = doc -> doc.created ) public var created:Date;
-  @DocumentField( handler = doc -> doc.modified ) public var modified:Date;
-  @ChildrenField( relation = ChildrenModel ) public var children:Selection<ChildrenModel>;
-}
-
-@Collection(
-  path = "folder",
-  resource = new stitch.resource.FolderResource('_info')
+@:repository( 
+  path = 'tests',
+  isDirectory = true,
+  defaultExtension = 'json'
 )
-private class FolderModel implements Model {
-  @StringField public var value:String;
-  @ChildrenField( relation = ChildrenModel ) public var children:Selection<ChildrenModel>;
-  @ChildrenField( relation = FolderModel, path = 'stuff' ) public var foldered:Selection<FolderModel>;
+class TestModel implements Model {
+  @:id(info, auto) var id:String;
+  @:info var created:Date;
+  @:info(modified) var updated:Date;
+  @:field var foo:String;
+  @:field var bar:String;
+  @:field var sub:Sub;
+  @:children(path = 'test_subs') var subs:Array<Sub>;
+  @:belongsTo var author:User;
 }
 
-@Collection( path = 'repeat' )
-private class RepeatableModel implements Model {
-  @StringField public var name:String; 
-  @RepeatableField( field = StringField ) public var items:Array<String>;
+class Sub implements Model {
+  @:id(info, auto) var key:String;
+  @:field var bin:Int;
+  @:field var content:Markdown;
 }
+
+@:repository(
+  path = 'users',
+  defaultExtension = 'json'
+)
+class User implements Model {
+  @:id(info, auto) var id:String;
+  @:info var created:Date;
+  @:info(modified) var updated:Date;
+  @:field var name:String;
+  @:field var lastName:String;
+  @:hasMany(on = 'author_id') var testers:Array<TestModel>;
+}
+

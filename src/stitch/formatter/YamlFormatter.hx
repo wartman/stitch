@@ -4,19 +4,16 @@ import yaml.Parser;
 import yaml.Yaml;
 import stitch.Formatter;
 
-class YamlFormatter<T> implements Formatter<T> {
+class YamlFormatter implements Formatter {
   
-  public final defaultExtension:String = 'yml';
-  public final allowedExtensions:Array<String> = [ 'yml', 'yaml' ];
-
   public function new() {}
-
-  public function encode(data:T):String {
-    return Yaml.render(data);
+  
+  public function parse(data:String):Dynamic {
+    return Yaml.parse(data, Parser.options().useObjects());
   }
   
-  public function decode(data:String):T {
-    return cast Yaml.parse(data, Parser.options().useObjects());
+  public function generate(data:Dynamic):String {
+    return Yaml.render(data);
   }
 
 }

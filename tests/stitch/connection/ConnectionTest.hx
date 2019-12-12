@@ -26,7 +26,7 @@ class ConnectionTest {
 
   @test('Loads document correctly')
   public function testLoad() {
-    cnx.read('flat/a.json').contents.equals('{"title":"a","value":"a"}');
+    cnx.read('flat/a.json').equals('{"title":"a","value":"a"}');
   }
 
   @test('writes and removes files correctly')

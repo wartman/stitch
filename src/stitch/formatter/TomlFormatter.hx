@@ -1,18 +1,18 @@
 package stitch.formatter;
 
-import haxe.Json;
+import Toml;
 import stitch.Formatter;
 
-class JsonFormatter implements Formatter {
-
+class TomlFormatter implements Formatter {
+  
   public function new() {}
-
+  
   public function parse(data:String):Dynamic {
-    return cast Json.parse(data);
+    return Toml.parse(data);
   }
   
   public function generate(data:Dynamic):String {
-    return Json.stringify(data);
+    return Toml.generate(data);
   }
 
 }

@@ -1,76 +1,80 @@
 package stitch;
 
 import haxe.ds.Map;
-import stitch.Collection;
-import stitch.error.*;
 
-using Type;
-using Reflect;
+using StringTools;
+using haxe.io.Path;
 
-@:allow(stitch)
+@:allow(stitch.Repository)
 class Store {
-
+  
   final connection:Connection;
-  final cache:Map<String, Array<Dynamic>> = [];
+  final repositories:Map<RepositoryFactory<Dynamic>, Repository<Dynamic>> = [];
+  final formatters:Map<String, Formatter> = [];
 
-  public function new(connection) {
+  public function new(connection, ?formatters:Map<String, Formatter>) {
     this.connection = connection;
-  }
-
-  public function flushCache() {
-    for (key in cache.keys()) cache.remove(key);
-  }
-
-  public function get<T:Model>(model:Class<T>, ?overrides:CollectionParams) {
-    var collection:Collection<T> = model.getProperty('collection');
-    if (overrides != null) collection = collection.withOverrides(overrides);
-    var name = getCacheName(collection);
-    if (!cache.exists(name)) {
-      // Todo: there is probably a more effiecent way to do this,
-      //       but it isn't a problem -- yet.
-      //       How will it function with hundreds of pages though?
-      var models = loadCollection(collection);
-      cache.set(name, models);
+    if (formatters != null) {
+      for (ext => formatter in formatters) addFormatter(ext, formatter);
     }
-    return new Selection(this, collection, cast cache.get(name));
   }
 
-  public function save<T:Model>(model:T, ?collection:Collection<T>) {
-    if (collection == null) collection = model.getClass().getProperty('collection');
-    if (!model.exists()) throw new CannotSaveError(collection);
-    var name = getCacheName(collection);
-    cache.remove(name);
-    return collection.resource.save(connection, collection, model);
-  }
-
-  public function remove<T:Model>(model:T, ?collection:Collection<T>) {
-    if (!model.exists()) return false;
-    if (collection == null) collection = model.getClass().getProperty('collection');
-    var name = getCacheName(collection);
-    cache.remove(name);
-    return collection.resource.remove(connection, collection, model);
-  }
-
-  function getCacheName<T:Model>(collection:Collection<T>) {
-    var name = collection.getClass().getClassName();
-    return '${name}_${collection.path}';
-  }
-
-  function loadCollection<T:Model>(collection:Collection<T>):Array<T> {
-    return collection.resource.list(connection, collection)
-      .map(id -> loadModel(collection, id))
-      .filter(m -> m != null);
-  }
-
-  function loadModel<T:Model>(collection:Collection<T>, id:String):T {
-    return switch collection.resource.load(connection, collection, id)  {
-      case Some(model): 
-        model.connect(this);
-        model;
-      case None: 
-        throw new NotFoundError(collection, id);
-        null; 
+  /**
+    Add a formatter to handle the given extension. Handle multiple extensions by
+    with a comma-delimited list.
+  **/
+  public function addFormatter(ext:String, formatter:Formatter) {
+    if (ext.contains(',')) {
+      for (e in ext.split(',')) {
+        addFormatter(e, formatter);
+      }
+      return;
     }
+    formatters.set(ext.trim(), formatter);
+  }
+
+  public function getFormatter(ext:String):Formatter {
+    return formatters.get(ext);
+  }
+
+  public function getRepository<T:Model>(factory:RepositoryFactory<T>):Repository<T> {
+    if (!repositories.exists(factory)) {
+      repositories.set(factory, factory.__createRepository(this));
+    }
+    return cast repositories.get(factory);
+  }
+
+  function __listIds(path:String):Array<String> {
+    return connection.list(path);
+  }
+
+  function __loadAll(path:String):Array<{ info:Info, contents:Dynamic }> {
+    var paths = __listIds(path);
+    return [ for (p in paths) __load(p) ];
+  }
+
+  function __load<T:{}>(path:String):{ info:Info, contents:T } {
+    for (ext => parser in formatters) {
+      var resolved = path.withExtension(ext);
+      if (connection.exists(resolved)) {
+        var raw = connection.read(resolved);
+        return {
+          info: connection.getInfo(resolved),
+          contents: parser.parse(raw)
+        };
+      }
+    }
+    return null;
+  }
+
+  function __save<T:{}>(path:String, ext:String, content:T) {
+    var formatter = formatters.get(ext);
+    if (formatter == null) throw new NoFormatterError(ext);
+    connection.write(path.withExtension(ext), formatter.generate(content));
+  }
+
+  function __remove(path:String) {
+    if (connection.exists(path)) connection.remove(path);
   }
 
 }

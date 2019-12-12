@@ -1,7 +1,6 @@
 import sys.FileSystem;
 import medic.Runner;
 import stitch.*;
-import stitch.field.*;
 import stitch.connection.*;
 import stitch.formatter.*;
 
@@ -12,7 +11,6 @@ class Test {
   public static function main() {
     var runner = new Runner();
     var resources = Path.join([ Sys.programPath().directory().directory(), 'tests/res' ]);
-    var runner = new Runner();
     
     if (!FileSystem.exists(resources)) {
       throw 'The required test folder "${resources}" was not found';
@@ -25,9 +23,6 @@ class Test {
     runner.add(new MemoryConnectionTest());
 
     runner.add(new TextFormatterTest());
-
-    runner.add(new JsonFieldTest());
-    runner.add(new RepeatableFieldTest());
 
     runner.run();
   }

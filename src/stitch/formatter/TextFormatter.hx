@@ -3,25 +3,11 @@ package stitch.formatter;
 import haxe.DynamicAccess;
 import stitch.Formatter;
 
-using Reflect;
 using StringTools;
 
-/**
-  A simple key/value format.
+class TextFormatter implements Formatter {
 
-  ```
-  key: some value
-  ---
-  repeatable-key[]: a
-  ---
-  repeatable-key[]: b
-  ```
-**/
-class TextFormatter<T> implements Formatter<T> {
-
-  public final defaultExtension:String = 'txt';
-  public final allowedExtensions:Array<String> = [ 'txt' ];
-
+  
   final splitter:String = '---';
   final matcher:EReg;
 
@@ -30,15 +16,7 @@ class TextFormatter<T> implements Formatter<T> {
     matcher = new EReg("\\s*(?<![\\w\\d-])" + this.splitter + "\\s*(?<![\\w\\d-])\\n*", 'g');
   }
 
-  public function encode(data:T):String {
-    var out:Array<String> = [];
-    for (field in Reflect.fields(data)) {
-      out.push('${field}: ${Reflect.getProperty(data, field)}');
-    }
-    return out.join('\n' + splitter + '\n');
-  }
-
-  public function decode(data:String):T {
+  public function parse(data:String):Dynamic {
     var out:DynamicAccess<Dynamic> = new DynamicAccess();
     var parts = matcher.split(data);
     
@@ -47,21 +25,69 @@ class TextFormatter<T> implements Formatter<T> {
       var sep = part.indexOf(':');
       var key = part.substr(0, sep).trim();
       var value:Dynamic = part.substr(sep + 1).trim();
-      
-      if (key.endsWith('[]')) {
-        key = key.substr(0, key.indexOf('[]'));
-        if (!out.exists(key)) {
-          out.set(key, []);
-        }
-
-        // todo: ensure that data is an array
-        var data:Array<Dynamic> = out.get(key);
-        data.push(value);
-      } else {
-        out.set(key, value);
-      }
+      setValue(key, value, out);
     }
+
     return cast out;
+  }
+
+  function setValue(name:String, value:Dynamic, target:DynamicAccess<Dynamic>) {
+    name = name.trim();
+    if (name.contains('.')) {
+      var key = name.substr(0, name.indexOf('.'));
+      name = name.substr(name.indexOf('.') + 1);
+      if (key.contains('[')) {
+        var index = Std.parseInt(key.substr(key.indexOf('[') + 1, key.indexOf(']')).trim());
+        key = key.substr(0, key.indexOf('['));
+        if (!target.exists(key)) {
+          target.set(key, []);
+        }
+        var out:Array<DynamicAccess<Dynamic>> = target.get(key);
+        if (out.length - 1 < index) {
+          out.push(new DynamicAccess());
+        }
+        setValue(name, value, out[index]);
+      } else {
+        if (!target.exists(key)) {
+          target.set(key, new DynamicAccess());
+        }
+        setValue(name, value, target.get(key));
+      }
+    } else if (name.endsWith('[]')) {
+      name = name.substr(0, name.indexOf('[]')).trim();
+      if (!target.exists(name)) {
+        target.set(name, []);
+      }
+      (target.get(name):Array<Dynamic>).push(value);
+    } else {
+      target.set(name, value);
+    }
+  }
+  
+  public function generate(data:Dynamic):String {
+    var out:Array<String> = [];
+    var obj:DynamicAccess<Dynamic> = data;
+    for (name => value in obj) {
+      out.push(writeField(name, value));
+    }
+    return out.join('\n' + splitter + '\n');
+  }
+
+  function writeField(name:String, value:Dynamic, ?index:Int) {
+    if (Std.is(value, Array)) {
+      var items:Array<Dynamic> = value;
+      return [ for (index in 0...items.length) 
+        writeField(name, items[index], index)
+      ].join('\n${splitter}\n');
+    }
+    // a little iffy:
+    if (!Std.is(value, String) && !Std.is(value, Int) && !Std.is(value, Float)) {
+      if (index != null) name = '${name}[${index}]';
+      return [ for (field => item in (value:DynamicAccess<Dynamic>)) 
+        writeField('${name}.${field}', item) 
+      ].join('\n${splitter}\n');  
+    }
+    return if (index != null) '${name}[]: ${value}' else '${name}: ${value}';
   }
 
 }

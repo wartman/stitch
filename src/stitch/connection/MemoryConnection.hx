@@ -1,31 +1,48 @@
 package stitch.connection;
 
-import haxe.ds.Map;
-import stitch.Connection;
-import stitch.Document;
-
 using haxe.io.Path;
 
 typedef FakeDirectory = {
   dirs:Map<String, FakeDirectory>,
-  documents:Map<String, Document>
+  documents:Map<String, String>
 };
 
 class MemoryConnection implements Connection {
-
+  
   final data:FakeDirectory = { dirs: [], documents: [] };
 
   public function new(?raw:Map<String, Dynamic>) {
-    if (raw != null) for (id => value in raw) {
-      if (!Std.is(value, String)) { // uh
+    function create(id:String, value:Dynamic) {
+      if (Std.is(value, String)) { // uh
+        write(id, value);
+      } else {
         var sub:Map<String, String> = value;
         for (key => value in sub) {
-          write(Path.join([ id, key ]), value);
+          create(Path.join([ id, key ]), value);
         }
-      } else {
-        write(id, value);
       }
     }
+    
+    if (raw != null) for (id => value in raw) {
+      create(id, value);
+    }
+  }
+
+  public function getInfo(path:String):Info {
+    var parts = path.normalize().split('/');
+    var file = parts.pop();
+    var dir = data;
+    for (part in parts) {
+      dir = dir.dirs.get(part);
+      if (dir == null) return null;
+    }
+    return {
+      created: Date.now(),
+      modified: Date.now(),
+      extension: file.extension(),
+      path: parts,
+      name: file.withoutExtension()
+    };
   }
 
   public function list(path:String):Array<String> {
@@ -35,24 +52,22 @@ class MemoryConnection implements Connection {
       dir = dir.dirs.get(part);
       if (dir == null) return [];
     }
-    return [for (k in dir.dirs.keys()) k]
-      .concat([for (k in dir.documents.keys()) k]);
+    return [ for (file => _ in dir.documents) file ]
+      .concat([ for (d => _ in dir.dirs) d ]);
   }
 
   public function exists(path:String):Bool {
     var parts = path.normalize().split('/');
+    var file = parts.pop();
     var dir = data;
     for (part in parts) {
-      if (part.extension() != '') {
-        return dir.documents.exists(part);
-      }
       dir = dir.dirs.get(part);
       if (dir == null) return false;
     }
-    return dir != null;
+    return dir.documents.exists(file) || dir.dirs.exists(file);
   }
 
-  public function read(path:String):Document {
+  public function read(path:String):String {
     var parts = path.normalize().split('/');
     var file = parts.pop();
     var dir = data;
@@ -63,7 +78,7 @@ class MemoryConnection implements Connection {
     return dir.documents.get(file);
   }
 
-  public function write(path:String, content:String):Bool {
+  public function write(path:String, contents:String):Bool {
     var parts = path.normalize().split('/');
     var file = parts.pop();
     var dir = data;
@@ -75,14 +90,7 @@ class MemoryConnection implements Connection {
       dir = dir.dirs.get(part);
     }
 
-    if (dir.documents.exists(file)) {
-      var c = dir.documents.get(file);
-      c.contents = content;
-      c.modified = Date.now();
-      return true;
-    }
-
-    dir.documents.set(file, Document.create(path, content));
+    dir.documents.set(file, contents);
     return true;
   }
 
