@@ -136,7 +136,8 @@ class Model {
           path: [],
           extension: null,
           created: Date.now(),
-          modified: Date.now()
+          modified: Date.now(),
+          fullPath: ''
         } : __info;
         __fields = __f__;
       }
@@ -228,12 +229,14 @@ class Model {
     for (param in params) switch param {
       case macro auto: 
         var prefix = getRepositoryOptions().path;
-        isAuto = true; 
-        modelFields.push((macro class {
-          static function __generateId() {
-            return stitch.IdTools.getUniqueId($v{prefix});
-          }
-        }).fields[0]);
+        isAuto = true;
+        if (!fields.exists(f -> f.name == '__generateId')) {
+          modelFields.push((macro class {
+            static function __generateId() {
+              return stitch.IdTools.getUniqueId($v{prefix});
+            }
+          }).fields[0]);
+        }
       case macro info:
         fromInfo = 'name';
       case macro info = ${e}: switch e.expr {
@@ -621,7 +624,16 @@ class Model {
         // todo: is there a less daft way to get the type here?
         transformer = macro @:pos(f.pos) $p{t.toString().split('.')};
       } else if (isModelArray(t)) {
-        // todo
+        // todo: is there a less daft way to get the type here?
+        var parts = getModelType(t, f.pos).toString().split('.');
+        transformer = macro @:pos(f.pos) ({
+          __decode: (info, data) -> data != null 
+            ? data.map(d -> $p{parts}.__decode(info, d))
+            : [],
+          __encode: (data) -> data != null 
+            ? data.map($p{parts}.__encode)
+            : []
+        });
       }
     }
 

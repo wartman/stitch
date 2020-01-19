@@ -5,5 +5,6 @@ typedef Info = {
   modified:Date,
   extension:String,
   path:Array<String>,
-  name:String
+  name:String,
+  fullPath:String
 }

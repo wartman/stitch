@@ -25,7 +25,8 @@ class FileConnection implements Connection {
           path: path.directory().split('/'),
           extension: path.extension(),
           created: stat.ctime,
-          modified: stat.mtime
+          modified: stat.mtime,
+          fullPath: path
         };
       case None: null;
     }

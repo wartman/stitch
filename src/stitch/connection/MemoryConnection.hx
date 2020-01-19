@@ -41,7 +41,8 @@ class MemoryConnection implements Connection {
       modified: Date.now(),
       extension: file.extension(),
       path: parts,
-      name: file.withoutExtension()
+      name: file.withoutExtension(),
+      fullPath: path
     };
   }
 

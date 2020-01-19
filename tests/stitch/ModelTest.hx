@@ -21,7 +21,11 @@ class ModelTest {
             "sub": {
               "bin": "1",
               "content": "###foo"
-            }
+            },
+            "inlineSubs": [
+              { "bin": "2", "content": "..." },
+              { "bin": "3", "content": "..." }
+            ]
           }'
         ],
         'one/test_subs' => [
@@ -112,8 +116,15 @@ Foo
     fred.testers[1].id.equals('two');
   }
 
-}
+  @test('Inline arrays of models work')
+  public function testInlineArray() {
+    var one = getStore().getRepository(TestModel).get('one');
+    one.inlineSubs.length.equals(2);
+    one.inlineSubs[0].bin.equals(2);
+    one.inlineSubs[1].bin.equals(3);
+  }
 
+}
 
 @:repository( 
   path = 'tests',
@@ -127,6 +138,7 @@ class TestModel implements Model {
   @:field var foo:String;
   @:field var bar:String;
   @:field var sub:Sub;
+  @:field @:optional var inlineSubs:Array<Sub>;
   @:children(path = 'test_subs') var subs:Array<Sub>;
   @:belongsTo var author:User;
 }

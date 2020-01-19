@@ -100,7 +100,8 @@ class Repository<T:Model> {
       path: info.path.slice(0, info.path.length - 1),
       created: info.created,
       modified: info.modified,
-      extension: info.extension
+      extension: info.extension,
+      fullPath: info.fullPath.directory()
     };
   }
 
