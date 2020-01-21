@@ -604,6 +604,7 @@ class Model {
       case 'Int': macro @:pos(f.pos) stitch.transformer.IntTransformer;
       case 'Float': macro @:pos(f.pos) stitch.transformer.FloatTransformer;
       case 'Bool': macro @:pos(f.pos) stitch.transformer.BoolTransformer;
+      case 'stitch.types.Markdown': macro @:pos(f.pos) stitch.transformer.MarkdownTransformer;
       default: null;
     }
 
@@ -616,9 +617,8 @@ class Model {
     }
 
     if (transformer == null) {
-      if (Context.unify(t.toType(), Context.getType('stitch.types.Markdown'))) {
-        // todo: this feels off.
-        transformer = macro @:pos(f.pos) stitch.transformer.MarkdownTransformer;
+      if (Context.unify(t.toType(), Context.getType('String'))) {
+        transformer = macro @:pos(f.pos) stitch.transformer.StringTransformer;
       } else if (isModel(t)) {
         // todo: how should sub-model ids be set?
         // todo: is there a less daft way to get the type here?
