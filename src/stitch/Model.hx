@@ -1,14 +1,16 @@
 package stitch;
 #if !macro
 
+import stitch.Repository;
+
 @:allow(stitch.Repository)
 @:allow(stitch.Selection)
 @:autoBuild(stitch.Model.build())
 interface Model {
   private var __info:Info;
   private function __getId():String;
-  private function __resolveMappings(store:Store):Void;
-  private function __saveMappings(store:Store):Void;
+  private function __resolveMappings(store:Store, options:RepositoryOptions):Void;
+  private function __saveMappings(store:Store, options:RepositoryOptions):Void;
 }
 
 #else
@@ -144,11 +146,11 @@ class Model {
 
       function __getId() return this.$idField;
 
-      function __resolveMappings(store:stitch.Store) {
+      function __resolveMappings(store:stitch.Store, options:stitch.Repository.RepositoryOptions) {
         $b{resolveMappings};
       }
 
-      function __saveMappings(store:stitch.Store) {
+      function __saveMappings(store:stitch.Store, options:stitch.Repository.RepositoryOptions) {
         $b{saveMappings};
       }
 
@@ -333,12 +335,12 @@ class Model {
     addFieldType(name, t, true, f.pos);
 
     resolveMappings.push(macro @:pos(f.pos) this.$mapping = () -> this.__fields.$name = store.getRepository($p{clsPath}).withOverrides({
-      path: haxe.io.Path.join([ $v{options.path}, __getId(), $v{path} ]),
+      path: haxe.io.Path.join([ options.path, __getId(), $v{path} ]),
       defaultExtension: $v{ext}
     }).all());
 
     saveMappings.push(macro @:pos(f.pos) for (m in this.$name) store.getRepository($p{clsPath}).withOverrides({
-      path: haxe.io.Path.join([ $v{options.path}, __getId(), $v{path} ]),
+      path: haxe.io.Path.join([ options.path, __getId(), $v{path} ]),
       defaultExtension: $v{ext}
     }).save(m));
 

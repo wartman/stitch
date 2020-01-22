@@ -43,7 +43,7 @@ class Repository<T:Model> {
     var data = store.__load(getPath(id));
     if (data != null) {
       var model = decoder(prepareInfo(data.info), data.contents);
-      model.__resolveMappings(store);
+      model.__resolveMappings(store, options);
       return model;
     }
     return null;
@@ -79,7 +79,7 @@ class Repository<T:Model> {
       resolveExtension(model),
       encoder(model)
     );
-    model.__saveMappings(store);
+    model.__saveMappings(store, options);
     model.__info = prepareInfo(store.connection.getInfo(path));
   }
 

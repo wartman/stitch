@@ -6,7 +6,6 @@ import stitch.Formatter;
 using StringTools;
 
 class TextFormatter implements Formatter {
-
   
   final splitter:String = '---';
   final matcher:EReg;
