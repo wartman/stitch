@@ -23,8 +23,8 @@ class ModelTest {
               "content": "###foo"
             },
             "inlineSubs": [
-              { "bin": "2", "content": "..." },
-              { "bin": "3", "content": "..." }
+              { "bin": 2, "content": "..." },
+              { "bin": 3, "content": "..." }
             ]
           }'
         ],
