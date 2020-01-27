@@ -1,11 +1,15 @@
 -cp src
 -cp tests
 
+-lib tink_core
 -lib markdown
 -lib medic
 -lib hxnodejs
 -lib yaml
 -lib toml
 -main Test
+
+-dce full
+-D analyzer-optimize
 
 -js dist/test.js

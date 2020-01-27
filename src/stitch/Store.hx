@@ -4,6 +4,7 @@ import haxe.ds.Map;
 
 using StringTools;
 using haxe.io.Path;
+using tink.CoreApi;
 
 @:allow(stitch.Repository)
 class Store {
@@ -44,37 +45,55 @@ class Store {
     return cast repositories.get(factory);
   }
 
-  function __listIds(path:String):Array<String> {
+  function __listIds(path:String):Promise<Array<String>> {
     return connection.list(path);
   }
 
-  function __loadAll(path:String):Array<{ info:Info, contents:Dynamic }> {
-    var paths = __listIds(path);
-    return [ for (p in paths) __load(p) ];
+  function __loadAll(path:String):Promise<Array<{ info:Info, contents:Dynamic }>> {
+    return __listIds(path).next(paths -> Promise.inParallel([ for (p in paths) __load(p) ]));
   }
 
-  function __load<T:{}>(path:String):{ info:Info, contents:T } {
-    for (ext => parser in formatters) {
-      var resolved = path.withExtension(ext);
-      if (connection.exists(resolved)) {
-        var raw = connection.read(resolved);
-        return {
-          info: connection.getInfo(resolved),
-          contents: parser.parse(raw)
-        };
+  function __load<T:{}>(path:String):Promise<{ info:Info, contents:T }> {
+    var dir = path.directory();
+    return connection.list(dir).next(items -> {
+      for (ext => parser in formatters) {
+        var fullPath = path.withExtension(ext);
+        for (name in items) {
+          if (Path.join([ dir, name ]) == fullPath) {
+            return connection.getInfo(fullPath).next(
+              info -> connection
+                .read(fullPath)
+                .next(contents -> {
+                  info: info,
+                  contents: parser.parse(contents)
+                })
+            );
+          }
+        }
       }
-    }
-    return null;
+      return new Error(NotFound, 'No file found for ${path}');
+    });
+    // for (ext => parser in formatters) {
+    //   var resolved = path.withExtension(ext);
+    //   if (connection.exists(resolved)) {
+    //     var raw = connection.read(resolved);
+    //     return {
+    //       info: connection.getInfo(resolved),
+    //       contents: parser.parse(raw)
+    //     };
+    //   }
+    // }
+    // return null;
   }
 
-  function __save<T:{}>(path:String, ext:String, content:T) {
+  function __save<T:{}>(path:String, ext:String, content:T):Promise<Bool> {
     var formatter = formatters.get(ext);
-    if (formatter == null) throw new NoFormatterError(ext);
-    connection.write(path.withExtension(ext), formatter.generate(content));
+    if (formatter == null) return new NoFormatterError(ext);
+    return connection.write(path.withExtension(ext), formatter.generate(content));
   }
 
   function __remove(path:String) {
-    if (connection.exists(path)) connection.remove(path);
+    return connection.remove(path);
   }
 
 }

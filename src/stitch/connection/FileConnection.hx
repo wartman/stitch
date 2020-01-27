@@ -7,6 +7,7 @@ import stitch.Info;
 using sys.FileSystem;
 using sys.io.File;
 using haxe.io.Path;
+using tink.CoreApi;
 
 class FileConnection implements Connection {
   
@@ -16,7 +17,7 @@ class FileConnection implements Connection {
     this.root = root;
   }
 
-  public function getInfo(path:String):Info {
+  public function getInfo(path:String):Promise<Info> {
     return switch resolve(path) {
       case Some(path):
         var stat = FileSystem.stat(path);
@@ -28,29 +29,22 @@ class FileConnection implements Connection {
           modified: stat.mtime,
           fullPath: path
         };
-      case None: null;
+      case None: new Error(NotFound, 'The file ${path} does not exist');
     }
   }
 
-  public function list(dir:String):Array<String> {
+  public function list(dir:String):Promise<Array<String>> {
     return FileSystem.readDirectory(Path.join([ root, dir ]));
   }
 
-  public function exists(path:String):Bool {
-    return switch resolve(path) {
-      case Some(_): true;
-      case None: false;
-    }
-  }
-
-  public function read(path:String):String {
+  public function read(path:String):Promise<String> {
     return switch resolve(path) {
       case Some(path): File.getContent(path);
-      case None: null;
+      case None: new Error(NotFound, 'The file ${path} does not exist');
     }
   }
 
-  public function write(path:String, data:String):Bool {
+  public function write(path:String, data:String):Promise<Bool> {
     var path = Path.join([ root, path ]).normalize();
     var dir = path.directory();
     if (!dir.isDirectory()) {
@@ -63,7 +57,7 @@ class FileConnection implements Connection {
     return true;
   }
 
-  public function remove(path:String):Bool {
+  public function remove(path:String):Promise<Bool> {
     return switch resolve(path) {
       case Some(path):
         if (path.isDirectory()) {

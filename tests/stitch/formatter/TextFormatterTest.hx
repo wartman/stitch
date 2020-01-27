@@ -1,9 +1,9 @@
 package stitch.formatter;
 
-using medic.Assert;
+using Medic;
 using StringTools;
 
-class TextFormatterTest {
+class TextFormatterTest implements TestCase {
 
   public function new() {}
 

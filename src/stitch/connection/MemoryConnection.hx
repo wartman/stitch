@@ -1,6 +1,7 @@
 package stitch.connection;
 
 using haxe.io.Path;
+using tink.CoreApi;
 
 typedef FakeDirectory = {
   dirs:Map<String, FakeDirectory>,
@@ -28,7 +29,7 @@ class MemoryConnection implements Connection {
     }
   }
 
-  public function getInfo(path:String):Info {
+  public function getInfo(path:String):Promise<Info> {
     var parts = path.normalize().split('/');
     var file = parts.pop();
     var dir = data;
@@ -46,29 +47,19 @@ class MemoryConnection implements Connection {
     };
   }
 
-  public function list(path:String):Array<String> {
+  public function list(path:String):Promise<Array<String>> {
     var parts = path.normalize().split('/');
     var dir = data;
     for (part in parts) {
       dir = dir.dirs.get(part);
       if (dir == null) return [];
     }
-    return [ for (file => _ in dir.documents) file ]
+    var ids = [ for (file => _ in dir.documents) file ]
       .concat([ for (d => _ in dir.dirs) d ]);
+    return ids;
   }
 
-  public function exists(path:String):Bool {
-    var parts = path.normalize().split('/');
-    var file = parts.pop();
-    var dir = data;
-    for (part in parts) {
-      dir = dir.dirs.get(part);
-      if (dir == null) return false;
-    }
-    return dir.documents.exists(file) || dir.dirs.exists(file);
-  }
-
-  public function read(path:String):String {
+  public function read(path:String):Promise<String> {
     var parts = path.normalize().split('/');
     var file = parts.pop();
     var dir = data;
@@ -79,7 +70,7 @@ class MemoryConnection implements Connection {
     return dir.documents.get(file);
   }
 
-  public function write(path:String, contents:String):Bool {
+  public function write(path:String, contents:String):Promise<Bool> {
     var parts = path.normalize().split('/');
     var file = parts.pop();
     var dir = data;
@@ -95,7 +86,7 @@ class MemoryConnection implements Connection {
     return true;
   }
 
-  public function remove(path:String):Bool {
+  public function remove(path:String):Promise<Bool> {
     var parts = path.normalize().split('/');
     var file = parts.pop();
     var dir = data;

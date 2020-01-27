@@ -1,7 +1,9 @@
 package stitch;
+
 #if !macro
 
 import stitch.Repository;
+using tink.CoreApi;
 
 @:allow(stitch.Repository)
 @:allow(stitch.Selection)
@@ -9,8 +11,8 @@ import stitch.Repository;
 interface Model {
   private var __info:Info;
   private function __getId():String;
-  private function __resolveMappings(store:Store, options:RepositoryOptions):Void;
-  private function __saveMappings(store:Store, options:RepositoryOptions):Void;
+  private function __resolveMappings(store:Store, options:RepositoryOptions):Promise<tink.core.Noise>;
+  private function __saveMappings(store:Store, options:RepositoryOptions):Promise<tink.core.Noise>;
 }
 
 #else
@@ -146,12 +148,12 @@ class Model {
 
       function __getId() return this.$idField;
 
-      function __resolveMappings(store:stitch.Store, options:stitch.Repository.RepositoryOptions) {
-        $b{resolveMappings};
+      function __resolveMappings(store:stitch.Store, options:stitch.Repository.RepositoryOptions):tink.core.Promise<tink.core.Noise> {
+        return tink.core.Promise.inParallel([ $a{resolveMappings} ]).next(_ -> tink.core.Noise);
       }
 
-      function __saveMappings(store:stitch.Store, options:stitch.Repository.RepositoryOptions) {
-        $b{saveMappings};
+      function __saveMappings(store:stitch.Store, options:stitch.Repository.RepositoryOptions):tink.core.Promise<tink.core.Noise> {
+        return tink.core.Promise.inParallel([ $a{saveMappings} ]).next(_ -> tink.core.Noise);
       }
 
     }).fields;
@@ -328,32 +330,29 @@ class Model {
     var name = f.name;
     var getterName = 'get_${f.name}';
     var clsPath = getModelType(t, f.pos).toString().split('.');
-    var mapping = '__mapping_${name}';
     var path = overrides.path != null ? overrides.path : name;
     var ext = overrides.defaultExtension != null ? overrides.defaultExtension : options.defaultExtension;
 
     addFieldType(name, t, true, f.pos);
 
-    resolveMappings.push(macro @:pos(f.pos) this.$mapping = () -> this.__fields.$name = store.getRepository($p{clsPath}).withOverrides({
+    resolveMappings.push(macro @:pos(f.pos) store.getRepository($p{clsPath}).withOverrides({
       path: haxe.io.Path.join([ options.path, __getId(), $v{path} ]),
       defaultExtension: $v{ext}
-    }).all());
+    }).all().next(models -> {
+      this.__fields.$name = models;
+      return tink.core.Noise;
+    }));
 
-    saveMappings.push(macro @:pos(f.pos) for (m in this.$name) store.getRepository($p{clsPath}).withOverrides({
-      path: haxe.io.Path.join([ options.path, __getId(), $v{path} ]),
-      defaultExtension: $v{ext}
-    }).save(m));
+    // saveMappings.push(macro @:pos(f.pos) for (m in this.$name) store.getRepository($p{clsPath}).withOverrides({
+    //   path: haxe.io.Path.join([ options.path, __getId(), $v{path} ]),
+    //   defaultExtension: $v{ext}
+    // }).save(m));
 
     add((macro class {
 
       function $getterName() {
-        if (__fields.$name == null && this.$mapping != null) {
-          __fields.$name = this.$mapping();
-        }
         return __fields.$name;
       }
-
-      var $mapping:()->$t;
 
     }).fields);
   }
@@ -403,6 +402,7 @@ class Model {
       field: relationName,
       expr: macro @:pos(f.pos) stitch.transformer.StringTransformer.__decode(__i__, __f__.$relationName)
     });
+
     encode.push({
       field: relationName,
       expr: macro @:pos(f.pos) __f__.$name != null ? @:privateAccess __f__.$name.__getId() : @:privateAccess __f__.__fields.$relationName
@@ -410,24 +410,23 @@ class Model {
     
     var relationGetter = 'get_${relationName}';
     var relationSetter = 'set_${relationName}';
-    var mapping = '__mapping_${name}';
 
     resolveMappings.push(
-      macro @:pos(f.pos) this.$mapping = () -> store.getRepository($p{clsPath})
+      macro @:pos(f.pos) store.getRepository($p{clsPath})
         .withOverrides(${overrides})
+        .withOverrides({ skipMappings: true })
         .get(__fields.$relationName)
+        .next(model -> {
+          this.__fields.$name = model;
+          return tink.core.Noise;
+        })
     );
 
     add((macro class {
 
       function $getterName() {
-        if (__fields.$name == null && this.$mapping != null) {
-          __fields.$name = this.$mapping();
-        }
         return __fields.$name;
       }
-
-      var $mapping:()->$t;
       
       public var $relationName(get, set):String;
 
@@ -481,34 +480,32 @@ class Model {
 
     // todo: check if optional
     addFieldType(name, t, true, f.pos);
-
-    var mapping = '__mapping_${name}';
     
     resolveMappings.push(
-      macro @:pos(f.pos) this.$mapping = () -> store.getRepository($p{clsPath})
+      macro @:pos(f.pos) store.getRepository($p{clsPath})
         .withOverrides(${overrides})
+        .withOverrides({ skipMappings: true })
         .select()
-        .where(m -> m.$relationName == this.__getId())
-        .first()
+        .next(selection -> {
+          this.__fields.$name = selection
+            .where(m -> m.$relationName == this.__getId())
+            .first();
+          return tink.core.Noise;
+        })
     );
 
-    saveMappings.push(
-      macro @:pos(f.pos) if (this.$name != null && this.$name.$relationName != this.__getId()) {
-        this.$name.$relationName = this.__getId();
-        store.getRepository($p{clsPath}).withOverrides(${overrides}).save(this.$name);
-      }
-    );
+    // saveMappings.push(
+    //   macro @:pos(f.pos) if (this.$name != null && this.$name.$relationName != this.__getId()) {
+    //     this.$name.$relationName = this.__getId();
+    //     store.getRepository($p{clsPath}).withOverrides(${overrides}).save(this.$name);
+    //   }
+    // );
 
     add((macro class {
 
       function $getterName() {
-        if (__fields.$name == null && this.$mapping != null) {
-          __fields.$name = this.$mapping();
-        }
         return __fields.$name;
       }
-
-      var $mapping:()->$t;
 
     }).fields);
   }
@@ -552,37 +549,35 @@ class Model {
 
     // todo: check if optional
     addFieldType(name, t, true, f.pos);
-
-    var mapping = '__mapping_${name}';
     
     resolveMappings.push(
-      macro @:pos(f.pos) this.$mapping = () -> store.getRepository($p{clsPath})
+      macro @:pos(f.pos) store.getRepository($p{clsPath})
         .withOverrides(${overrides})
+        .withOverrides({ skipMappings: true })
         .select()
-        .where(m -> m.$relationName == this.__getId())
-        .all()
+        .next(selection -> {
+          this.__fields.$name = selection
+            .where(m -> m.$relationName == this.__getId())
+            .all();
+          return tink.core.Noise;
+        })
     );
 
-    saveMappings.push(
-      macro @:pos(f.pos) if (this.$name != null) {
-        var __r = store.getRepository($p{clsPath}).withOverrides(${overrides});
-        for (m in this.$name) if (m.$relationName != this.__getId()) {
-          m.$relationName = this.__getId();
-          __r.save(m);
-        }
-      }
-    );
+    // saveMappings.push(
+    //   macro @:pos(f.pos) if (this.$name != null) {
+    //     var __r = store.getRepository($p{clsPath}).withOverrides(${overrides});
+    //     for (m in this.$name) if (m.$relationName != this.__getId()) {
+    //       m.$relationName = this.__getId();
+    //       __r.save(m);
+    //     }
+    //   }
+    // );
   
     add((macro class {
 
       function $getterName() {
-        if (__fields.$name == null && this.$mapping != null) {
-          __fields.$name = this.$mapping();
-        }
         return __fields.$name;
       }
-
-      var $mapping:()->$t;
 
     }).fields);
   }

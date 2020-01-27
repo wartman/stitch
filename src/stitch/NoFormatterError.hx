@@ -1,15 +1,11 @@
 package stitch;
 
-class NoFormatterError {
+using tink.CoreApi;
+
+class NoFormatterError extends Error {
   
-  final formatter:String;
-
-  public function new(formatter) {
-    this.formatter = formatter;
-  }
-
-  public function toString() {
-    return 'No formater was found for the extension [${formatter}].';
+  public function new(formatter:String) {
+    super(NotFound, 'No formater was found for the extension [${formatter}].');
   }
 
 }

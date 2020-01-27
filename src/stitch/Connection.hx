@@ -1,10 +1,11 @@
 package stitch;
 
+using tink.CoreApi;
+
 interface Connection {
-  public function getInfo(path:String):Info;
-  public function list(dir:String):Array<String>;
-  public function exists(path:String):Bool;
-  public function read(path:String):String;
-  public function write(path:String, data:String):Bool;
-  public function remove(path:String):Bool;
+  public function getInfo(path:String):Promise<Info>;
+  public function list(dir:String):Promise<Array<String>>;
+  public function read(path:String):Promise<String>;
+  public function write(path:String, data:String):Promise<Bool>;
+  public function remove(path:String):Promise<Bool>;
 }

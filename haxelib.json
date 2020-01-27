@@ -3,10 +3,9 @@
   "classPath": "src/",
   "license": "GPL",
   "contributors": [ "wartman" ],
-  "version": "0.0.0",
-  "releasenote": "Just a test!",
+  "version": "0.0.1",
+  "releasenote": "Async",
   "dependencies": {
-    "markdown": "",
-    "yaml": ""
+    "markdown": ""
   }
 }

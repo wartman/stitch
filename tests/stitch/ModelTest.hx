@@ -4,9 +4,9 @@ import stitch.formatter.*;
 import stitch.types.Markdown;
 import stitch.connection.MemoryConnection;
 
-using medic.Assert;
+using Medic;
 
-class ModelTest {
+class ModelTest implements TestCase {
 
   public function new() {}
 
@@ -79,49 +79,91 @@ Foo
   }
 
   @test('Finds models by id')
-  public function testFind() {
+  @async
+  public function testFind(done) {
     var store = getStore();
-    var one = store.getRepository(TestModel).get('one');
-    one.id.equals('one');
+    store.getRepository(TestModel).get('one').handle(o -> switch o {
+      case Success(one):
+        one.id.equals('one');
+        done();
+      case Failure(err):
+        Assert.fail(err.message);
+        done();
+    });
   }
 
   @test('Parses inline models')
-  public function testInlineModel() {
+  @async
+  public function testInlineModel(done) {
     var store = getStore();
-    var one = store.getRepository(TestModel).get('one');
-    Std.is(one.sub, Sub).isTrue();
-    one.sub.bin.equals(1);
+    store.getRepository(TestModel).get('one').handle(o -> switch o {
+      case Success(one):
+        Std.is(one.sub, Sub).isTrue();
+        one.sub.bin.equals(1);
+        done();
+      case Failure(err):
+        Assert.fail(err.message);
+        done();
+    });
   }
 
-  @test('Loads children lazily')
-  public function testChildren() {
-    var one = getStore().getRepository(TestModel).get('one');
-    one.subs.length.equals(1);
+  @test('Loads children')
+  @async
+  public function testChildren(done) {
+    getStore().getRepository(TestModel).get('one').handle(o -> switch o {
+      case Success(one):
+        one.subs.length.equals(1);
+        done();
+      case Failure(err):
+        Assert.fail(err.message);
+        done();
+    });
   }
 
   @test('Finds @:belongsTo relations')
-  public function testBelongsTo() {
-    var one = getStore().getRepository(TestModel).get('one');
-    Std.is(one.author, User).isTrue();
-    one.author_id.equals(one.author.id);
-    one.author.name.equals('Fred');
+  @async
+  public function testBelongsTo(done) {
+    getStore().getRepository(TestModel).get('one').handle(o -> switch o {
+      case Success(one):
+        Std.is(one.author, User).isTrue();
+        one.author_id.equals(one.author.id);
+        one.author.name.equals('Fred');
+        done();
+      case Failure(err):
+        Assert.fail(err.message);
+        done();
+    });
   }
 
   @test('Finds @:hasMany relations')
-  public function testHasMany() {
-    var fred = getStore().getRepository(User).get('fred');
-    Std.is(fred.testers, Array).isTrue();
-    fred.testers.length.equals(2);
-    fred.testers[0].id.equals('one');
-    fred.testers[1].id.equals('two');
+  @async
+  public function testHasMany(done) {
+    getStore().getRepository(User).get('fred').handle(o -> switch o {
+      case Success(fred):
+        Std.is(fred.testers, Array).isTrue();
+        fred.testers.length.equals(2);
+        fred.testers[0].id.equals('one');
+        fred.testers[1].id.equals('two');
+        done();
+      case Failure(err):
+        Assert.fail(err.message);
+        done();
+    });
   }
 
   @test('Inline arrays of models work')
-  public function testInlineArray() {
-    var one = getStore().getRepository(TestModel).get('one');
-    one.inlineSubs.length.equals(2);
-    one.inlineSubs[0].bin.equals(2);
-    one.inlineSubs[1].bin.equals(3);
+  @async
+  public function testInlineArray(done) {
+    getStore().getRepository(TestModel).get('one').handle(o -> switch o {
+      case Success(one):
+        one.inlineSubs.length.equals(2);
+        one.inlineSubs[0].bin.equals(2);
+        one.inlineSubs[1].bin.equals(3);
+        done();
+      case Failure(err):
+        Assert.fail(err.message);
+        done();
+    });
   }
 
 }

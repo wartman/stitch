@@ -2,11 +2,17 @@ package stitch;
 
 using haxe.io.Path;
 
+#if !macro
+  import stitch.error.*;
+  using tink.CoreApi;
+#end
+
 typedef RepositoryOptions = {
   ?path:String,
   ?defaultExtension:String,
   ?isDirectory:Bool,
-  ?dataFile:String
+  ?dataFile:String,
+  ?skipMappings:Bool
 }; 
 
 #if !macro
@@ -35,34 +41,31 @@ class Repository<T:Model> {
       path: overrides.path != null ? overrides.path : options.path,
       defaultExtension: overrides.defaultExtension != null ? overrides.defaultExtension : options.defaultExtension,
       isDirectory: overrides.isDirectory != null ? overrides.isDirectory : options.isDirectory,
-      dataFile: overrides.dataFile != null ? overrides.dataFile : options.dataFile
+      dataFile: overrides.dataFile != null ? overrides.dataFile : options.dataFile,
+      skipMappings: overrides.skipMappings != null ? overrides.skipMappings : options.skipMappings
     }, decoder, encoder);
   }
 
-  public function get(id:String):T {
-    var data = store.__load(getPath(id));
-    if (data != null) {
+  public function get(id:String):Promise<T> {
+    return store.__load(getPath(id)).next(data -> {
       var model = decoder(prepareInfo(data.info), data.contents);
-      model.__resolveMappings(store, options);
-      return model;
-    }
-    return null;
+      if (options.skipMappings) return model;
+      return model.__resolveMappings(store, options).next(_ -> model);
+    });
   }
 
-  public function select():Selection<T> {
-    return new Selection(all());
+  public function select():Promise<Selection<T>> {
+    return all().next(models -> new Selection(models));
   }
 
-  public function all():Array<T> {
+  public function all():Promise<Array<T>> {
     if (cache == null) {
-      cache = [];
-      for (id in store.__listIds(options.path)) {
-        if (!options.isDirectory && id.extension() == '') {
-          continue;
+      return store.__listIds(options.path).next(ids -> Promise.inParallel([
+        for (id in ids) {
+          if (!options.isDirectory && id.extension() == '') continue;
+          get(id);
         }
-        var model = get(id);
-        if (model != null) cache.push(model);
-      }
+      ])).next(models -> cache = models);
     }
     return cache;
   }
@@ -71,26 +74,27 @@ class Repository<T:Model> {
     return get(model.__getId()) != null;
   }
 
-  public function save(model:T):Void {
+  public function save(model:T):Promise<Bool> {
     invalidateCache();
     var path = getPath(model.__getId());
-    store.__save(
+    return store.__save(
       path,
       resolveExtension(model),
       encoder(model)
-    );
-    model.__saveMappings(store, options);
-    model.__info = prepareInfo(store.connection.getInfo(path));
+    ).next(_ -> {
+      // return model.__saveMappings(store, options);
+      return true;
+    });
   }
 
-  public function remove(model:T):Void {
+  public function remove(model:T):Promise<Bool> {
     invalidateCache();
     // Note: even if this is a directory-based model, we want to remove
     //       the entire dir, not just the dataFile.
     var path = Path
       .join([ options.path, model.__getId() ])
       .withExtension(resolveExtension(model));
-    store.__remove(path);
+    return store.__remove(path);
   }
   
   function prepareInfo(info:Info):Info {
