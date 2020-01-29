@@ -3,16 +3,15 @@ package stitch;
 using haxe.io.Path;
 
 #if !macro
-  import stitch.error.*;
   using tink.CoreApi;
+  using Lambda;
 #end
 
 typedef RepositoryOptions = {
   ?path:String,
   ?defaultExtension:String,
   ?isDirectory:Bool,
-  ?dataFile:String,
-  ?skipMappings:Bool
+  ?dataFile:String
 }; 
 
 #if !macro
@@ -23,55 +22,84 @@ class Repository<T:Model> {
   final options:RepositoryOptions;
   final decoder:(info:Info, data:Dynamic)->T;
   final encoder:(data:T)->Dynamic;
+  var locked:Bool = false;
+  var later:Signal<Noise>;
   var cache:Array<T>;
+  var modified:Date;
 
-  public function new(store, options, decoder, encoder) {
+  public function new(store, options, decoder, encoder, ?cache) {
     this.store = store;
     this.options = options;
     this.decoder = decoder;
     this.encoder = encoder;
+    this.cache = cache;
   }
 
   public function getOptions():RepositoryOptions {
     return options;
   }
 
-  public function withOverrides(overrides:RepositoryOptions) {
-    return new Repository(store, {
-      path: overrides.path != null ? overrides.path : options.path,
-      defaultExtension: overrides.defaultExtension != null ? overrides.defaultExtension : options.defaultExtension,
-      isDirectory: overrides.isDirectory != null ? overrides.isDirectory : options.isDirectory,
-      dataFile: overrides.dataFile != null ? overrides.dataFile : options.dataFile,
-      skipMappings: overrides.skipMappings != null ? overrides.skipMappings : options.skipMappings
-    }, decoder, encoder);
+  public function withOverrides(overrides:RepositoryOptions):Repository<T> {
+    return new Repository(
+      store, 
+      {
+        path: overrides.path != null ? overrides.path : options.path,
+        defaultExtension: overrides.defaultExtension != null ? overrides.defaultExtension : options.defaultExtension,
+        isDirectory: overrides.isDirectory != null ? overrides.isDirectory : options.isDirectory,
+        dataFile: overrides.dataFile != null ? overrides.dataFile : options.dataFile,
+      },
+      decoder, 
+      encoder,
+      // This ensures that relations don't cause endless loops, as parent models that
+      // have already been found will be cached. This may cause other issues though --
+      // consider if there are better options.
+      (overrides.path == null || overrides.path == options.path) ? cache : null
+    );
   }
 
   public function get(id:String):Promise<T> {
-    return store.__load(getPath(id)).next(data -> {
-      var model = decoder(prepareInfo(data.info), data.contents);
-      if (options.skipMappings) return model;
-      return model.__resolveMappings(store, options).next(_ -> model);
-    });
+    return all().next(models -> return models.find(m -> m.__getId() == id));
   }
 
-  public function select():Promise<Selection<T>> {
-    return all().next(models -> new Selection(models));
+  public function select():Selection<T> {
+    return new Selection(all());
   }
 
   public function all():Promise<Array<T>> {
+    if (locked) {
+      var promise = Promise.trigger();
+      later.handle(_ -> all().handle(o -> promise.trigger(o)));
+      return promise;
+    }
+
     if (cache == null) {
+      locked = true;
+      var trigger = Signal.trigger();
+      later = trigger.asSignal();
+      cache = [];
       return store.__listIds(options.path).next(ids -> Promise.inParallel([
         for (id in ids) {
           if (!options.isDirectory && id.extension() == '') continue;
-          get(id);
+          loadModel(id);
         }
-      ])).next(models -> cache = models);
+      ])).next(models -> {
+        trigger.trigger(Noise);
+        trigger.clear();
+        later = null;
+        locked = false;
+        models;
+      });
     }
-    return cache;
-  }
 
-  public function has(model:T) {
-    return get(model.__getId()) != null;
+    // return cache;
+
+    return wasModified().next(modified -> {
+      if (modified) {
+        invalidateCache();
+        return all();
+      }
+      return cache;
+    });
   }
 
   public function save(model:T):Promise<Bool> {
@@ -131,6 +159,26 @@ class Repository<T:Model> {
   function invalidateCache() {
     cache = null;
   }
+
+  // not sure about this tbh
+  function wasModified() {
+    return store.connection.getInfo(options.path).next(info -> {
+      if (modified == null) {
+        modified = info.modified;
+        return false;
+      }
+      return modified.getTime() != info.modified.getTime(); 
+    });
+  }
+
+  function loadModel(id:String):Promise<T> {
+    return store.__load(getPath(id)).next(data -> {
+      var model = decoder(prepareInfo(data.info), data.contents);
+      cache.push(model);
+      return model.__resolveMappings(store, options).next(_ -> model);
+    });
+  }
+
 
 }
 

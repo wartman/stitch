@@ -335,13 +335,16 @@ class Model {
 
     addFieldType(name, t, true, f.pos);
 
-    resolveMappings.push(macro @:pos(f.pos) store.getRepository($p{clsPath}).withOverrides({
-      path: haxe.io.Path.join([ options.path, __getId(), $v{path} ]),
-      defaultExtension: $v{ext}
-    }).all().next(models -> {
-      this.__fields.$name = models;
-      return tink.core.Noise;
-    }));
+    resolveMappings.push(
+      macro @:pos(f.pos) store.getRepository($p{clsPath})
+        .withOverrides({
+          path: haxe.io.Path.join([ options.path, __getId(), $v{path} ]),
+          defaultExtension: $v{ext}
+        }).all().next(models -> {
+          this.__fields.$name = models;
+          return tink.core.Noise;
+        })
+    );
 
     // saveMappings.push(macro @:pos(f.pos) for (m in this.$name) store.getRepository($p{clsPath}).withOverrides({
     //   path: haxe.io.Path.join([ options.path, __getId(), $v{path} ]),
@@ -410,11 +413,11 @@ class Model {
     
     var relationGetter = 'get_${relationName}';
     var relationSetter = 'set_${relationName}';
+    // var asyncGetter = 'get${relationName.charAt(0).toUpperCase() + relationName.substr(1)}';
 
     resolveMappings.push(
       macro @:pos(f.pos) store.getRepository($p{clsPath})
         .withOverrides(${overrides})
-        .withOverrides({ skipMappings: true })
         .get(__fields.$relationName)
         .next(model -> {
           this.__fields.$name = model;
@@ -437,6 +440,17 @@ class Model {
       function $relationSetter(value) {
         return __fields.$relationName = value;
       }
+
+      // public function $asyncGetter():tink.core.Promise<$t> {
+      //   if (__fields.$name != null) return __fields.$name;
+      //   return store.getRepository($p{clsPath})
+      //     .withOverrides(${overrides})
+      //     .get(__fields.$relationName)
+      //     .next(model -> {
+      //       this.__fields.$name = model;
+      //       return model;
+      //     });
+      // }
 
     }).fields);
   }
@@ -484,12 +498,11 @@ class Model {
     resolveMappings.push(
       macro @:pos(f.pos) store.getRepository($p{clsPath})
         .withOverrides(${overrides})
-        .withOverrides({ skipMappings: true })
         .select()
-        .next(selection -> {
-          this.__fields.$name = selection
-            .where(m -> m.$relationName == this.__getId())
-            .first();
+        .where(m -> m.$relationName == this.__getId())
+        .first()
+        .next(model -> {
+          this.__fields.$name = model;
           return tink.core.Noise;
         })
     );
@@ -553,12 +566,11 @@ class Model {
     resolveMappings.push(
       macro @:pos(f.pos) store.getRepository($p{clsPath})
         .withOverrides(${overrides})
-        .withOverrides({ skipMappings: true })
         .select()
-        .next(selection -> {
-          this.__fields.$name = selection
-            .where(m -> m.$relationName == this.__getId())
-            .all();
+        .where(m -> m.$relationName == this.__getId())
+        .all()
+        .next(models -> {
+          this.__fields.$name = models;
           return tink.core.Noise;
         })
     );

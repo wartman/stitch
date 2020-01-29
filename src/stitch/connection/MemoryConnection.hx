@@ -10,6 +10,7 @@ typedef FakeDirectory = {
 
 class MemoryConnection implements Connection {
   
+  final now:Date = Date.now();
   final data:FakeDirectory = { dirs: [], documents: [] };
 
   public function new(?raw:Map<String, Dynamic>) {
@@ -38,8 +39,8 @@ class MemoryConnection implements Connection {
       if (dir == null) return null;
     }
     return {
-      created: Date.now(),
-      modified: Date.now(),
+      created: now,
+      modified: now,
       extension: file.extension(),
       path: parts,
       name: file.withoutExtension(),

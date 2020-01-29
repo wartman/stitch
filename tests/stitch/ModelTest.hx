@@ -128,6 +128,7 @@ Foo
         Std.is(one.author, User).isTrue();
         one.author_id.equals(one.author.id);
         one.author.name.equals('Fred');
+        one.author.testers.indexOf(one).equals(0);
         done();
       case Failure(err):
         Assert.fail(err.message);
